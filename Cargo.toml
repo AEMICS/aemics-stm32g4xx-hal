@@ -4,7 +4,7 @@ categories = ["embedded", "hardware-support", "no-std"]
 description = "Peripheral access API for STM32G4 series microcontrollers"
 edition = "2021"
 keywords = ["arm", "cortex-m", "stm32g4xx", "hal"]
-name = "stm32g4xx-hal"
+name = "aemics-stm32g4xx-hal"
 readme = "README.md"
 version = "0.0.0"
 

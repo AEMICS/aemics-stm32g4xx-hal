@@ -3,6 +3,25 @@
 version = 3
 
 [[package]]
+name = "aemics-stm32g4xx-hal"
+version = "0.0.0"
+dependencies = [
+ "bare-metal 1.0.0",
+ "bitflags 2.4.2",
+ "cortex-m-log",
+ "cortex-m-rt",
+ "cortex-m-rtic",
+ "cortex-m-semihosting",
+ "defmt",
+ "embedded-hal 1.0.0",
+ "nb 1.1.0",
+ "panic-semihosting",
+ "static_assertions",
+ "stm32g4",
+ "vcell",
+]
+
+[[package]]
 name = "atomic-polyfill"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -410,25 +429,6 @@ dependencies = [
  "bare-metal 1.0.0",
  "cortex-m",
  "cortex-m-rt",
- "vcell",
-]
-
-[[package]]
-name = "stm32g4xx-hal"
-version = "0.0.0"
-dependencies = [
- "bare-metal 1.0.0",
- "bitflags 2.4.2",
- "cortex-m-log",
- "cortex-m-rt",
- "cortex-m-rtic",
- "cortex-m-semihosting",
- "defmt",
- "embedded-hal 1.0.0",
- "nb 1.1.0",
- "panic-semihosting",
- "static_assertions",
- "stm32g4",
  "vcell",
 ]
 
