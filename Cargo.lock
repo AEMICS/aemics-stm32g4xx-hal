@@ -20,6 +20,7 @@ dependencies = [
  "static_assertions",
  "stm32g4",
  "vcell",
+ "void",
 ]
 
 [[package]]

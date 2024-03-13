@@ -20,6 +20,10 @@ bitflags = "2.4.2"
 vcell = "0.1.3"
 static_assertions = "1.1.0"
 
+[dependencies.void]
+version = "1.0.2"
+default-features = false
+
 [dependencies.defmt]
 version = "0.3.2"
 optional = true
@@ -32,7 +36,7 @@ panic-semihosting = "0.6.0"
 cortex-m-log = { version = "0.8.0", features = ["log-integration"] }
 
 [features]
-default = ["rt","stm32g473", "embedded-hal-1"]
+default = ["rt","stm32g473"]
 rt = ["stm32g4/rt"]
 stm32g431 = ["stm32g4/stm32g431"]
 stm32g441 = ["stm32g4/stm32g441"]
