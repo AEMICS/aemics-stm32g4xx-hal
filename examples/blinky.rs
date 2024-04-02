@@ -1,42 +1,55 @@
 #![no_main]
 #![no_std]
 
-//Het importeren van de HAL
-use aemics_stm32g4xx_hal as hal;
+//Import the HAL.
+use aemics_stm32g4xx_hal as aemics_hal;
 
-use hal::prelude::*;
-use hal::stm32;
+//Import version specific digital logic. (This API changed between embedded-hal v0.2.7 and v1.0.0)
+use aemics_hal::hal::digital::*;
 
+use aemics_hal::{
+    delay::*,
+    gpio::GpioExt,
+    rcc::RccExt,
+};
 
-//De code heeft een entry point nodig, en een error handling
-use hal::cortex_m_rt::entry;
-use hal::panic_semihosting as _;
-use hal::cortex_m;
+//Import peripheral library of the STM32G4 family.
+use aemics_hal::stm32;
+
+//Import the core peripherals of the cortex-m architecture. This allows access to the system timer (SYST) for example.
+use aemics_hal::cortex_m;
+
+//Required for targeting a cortex-m platform with Rust code. Handles memory layout, startup, etc.
+use aemics_hal::cortex_m_rt::entry;
+
 
 #[entry]
 fn main() -> ! {
-    // Gebruik de peripheral crates
+    //Load device and core peripherals.
     let dp = stm32::Peripherals::take().unwrap();
     let cp = cortex_m::Peripherals::take().unwrap();
 
-    //Zet de klok op de default mode
+    //Grab abstracted RCC peripheral. This also initializes it to the default setting.
     let mut rcc = dp.RCC.constrain();
 
-    //Initialiseer de juiste pinnen
+    //Initialize GPIOB objects. This splits the GPIOB register into individually accessible pins.
     let gpiob = dp.GPIOB.split(&mut rcc);
-    //We gebruiken pin PB7, dit komt overeen met het ledje op de Pyglet. Deze zetten we in output modus
+
+    //Grab pin B7 and convert it to a push-pull output pin. This is the pin connected to the LED on the PYglet board.
     let mut led = gpiob.pb7.into_push_pull_output();
 
+    //Create a delay provider. This is driven by the system timer (SysTick)
     let mut delay_syst = cp.SYST.delay(&rcc.clocks);
 
+    //Program, toggles the LED on/off at 1Hz.
     loop {
-        //Zet de status van de LED, zet een delay, en verander dan de status weer
+
         led.set_high().unwrap();
 
-        delay_syst.delay_ms(1000);
+        delay_syst.delay_ms(100);
 
         led.set_low().unwrap();
 
-        delay_syst.delay_ms(1000);
+        delay_syst.delay_ms(100);
     }
 }

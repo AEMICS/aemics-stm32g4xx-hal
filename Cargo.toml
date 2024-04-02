@@ -11,17 +11,26 @@ version = "0.0.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-nb = "0.1.1"
+nb = "1.1.0"
 stm32g4 = "0.15.1"
 paste = "1.0"
-bitflags = "1.2"
-vcell = "0.1"
-static_assertions = "1.1"
+bitflags = "2.5.0"
+vcell = "0.1.3"
+static_assertions = "1.1.0"
 fugit = "0.3.5"
-embedded-hal-02 = { package = "embedded-hal", version = "0.2.7", features = ["unproven"] }
-embedded-hal-1 = { package = "embedded-hal", version = "1.0" }
-cortex-m-rt = "0.7.2"
-panic-semihosting = "0.5.3"
+cortex-m-rt = "0.7.3"
+panic-semihosting = "0.6.0"
+
+#Old embedded-hal version for backwards compatibility.
+[dependencies.embedded-hal-02]
+package = "embedded-hal"
+version = "0.2.7" #ignore the warning here, we need this version (0.2.7).
+features = ["unproven"]
+
+#Current embedded-hal version.
+[dependencies.embedded-hal-1]
+package = "embedded-hal"
+version = "1.0"
 
 [dependencies.cortex-m]
 version = "0.7.7"
@@ -69,7 +78,6 @@ cortex-m-log = { version = "0.8.0", features = ["log-integration"] }
 cfg-if = "1.0.0"
 embedded-sdmmc = "0.7.0"
 
-#TODO: Separate feature sets
 [features]
 default = ["rt", "stm32g473"]
 rt = ["stm32g4/rt"]
