@@ -37,16 +37,23 @@
 //! ```
 
 use crate::rcc::Clocks;
-use crate::time::MicroSecond;
+use crate::time::{NanoSecond};
 pub use cortex_m::delay::*;
 use cortex_m::peripheral::SYST;
 
 use crate::nb::block;
 use crate::time::ExtU32;
-use hal_old::blocking::delay::{DelayMs, DelayUs};
+use hal_api::delay::DelayNs;
+//use hal_api_old::blocking::delay::{DelayUs, DelayMs};
 
-pub trait CountDown: hal_old::timer::CountDown {
+/*
+pub trait CountDownCompat: hal_api_old::timer::CountDown {
     fn max_period(&self) -> MicroSecond;
+}
+*/
+
+pub trait CountDown: hal_api_custom::timer::CountDown {
+    fn max_period(&self) -> NanoSecond;
 }
 
 pub trait SYSTDelayExt {
@@ -62,13 +69,13 @@ impl SYSTDelayExt for SYST {
 pub trait DelayExt {
     fn delay<T>(&mut self, delay: T)
     where
-        T: Into<MicroSecond>;
+        T: Into<NanoSecond>;
 }
 
 impl DelayExt for Delay {
     fn delay<T>(&mut self, delay: T)
     where
-        T: Into<MicroSecond>,
+        T: Into<NanoSecond>,
     {
         self.delay_us(delay.into().ticks())
     }
@@ -90,7 +97,51 @@ impl<T> DelayFromCountDownTimer<T> {
 }
 
 macro_rules! impl_delay_from_count_down_timer  {
-    ($(($Delay:ident, $delay:ident, $num:expr)),+) => {
+     ($Delay:ident, [
+        $(($delay:ident, $num:expr),)+
+    ]) => {
+        impl<T> $Delay for DelayFromCountDownTimer<T>
+        where
+            T: CountDown<Time = NanoSecond>,
+        {
+            $(
+
+            fn $delay(&mut self, t: u32) {
+                let mut time_left_ns = t as u64 * $num;
+
+                let max_sleep = self.0.max_period();
+                let max_sleep_ns = max_sleep.to_nanos() as u64;
+
+                if time_left_ns > max_sleep_ns {
+                    self.0.start(max_sleep);
+
+                    // Process the time one max_sleep duration at a time
+                    // to avoid overflowing both u32 and the timer
+                    for _ in 0..(time_left_ns / max_sleep_ns) {
+                        block!(self.0.wait()).ok();
+                        time_left_ns -= max_sleep_ns;
+                    }
+                }
+
+                assert!(time_left_ns <= u32::MAX as u64);
+                assert!(time_left_ns <= max_sleep_ns);
+
+                let time_left: NanoSecond = (time_left_ns as u32).nanos();
+
+                // Only sleep
+                if time_left.ticks() > 0 {
+                    self.0.start(time_left);
+                    block!(self.0.wait()).ok();
+                }
+            }
+            )+
+        }
+    }
+}
+
+/*
+macro_rules! impl_delay_from_count_down_timer_old  {
+      ($(($Delay:ident, $delay:ident, $num:expr)),+) => {
         $(
 
             impl<T> $Delay<u32> for DelayFromCountDownTimer<T>
@@ -147,8 +198,20 @@ macro_rules! impl_delay_from_count_down_timer  {
         )+
     }
 }
+*/
+
 
 impl_delay_from_count_down_timer! {
-    (DelayMs, delay_ms, 1_000),
-    (DelayUs, delay_us, 1)
+    DelayNs, [
+        (delay_ms, 1_000_000),
+        (delay_us, 1_000),
+        (delay_ns, 1),
+    ]
 }
+
+/*
+impl_delay_from_count_down_timer_old! {
+    (DelayMs, delay_ms, 1_000),
+    (DelayUs, delay_us, 1_000_000)
+}
+*/

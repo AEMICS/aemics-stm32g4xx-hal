@@ -101,17 +101,18 @@ impl U32Ext for u32 {
     }
 }
 
-pub fn duration(hz: Hertz, cycles: u32) -> MicroSecond {
+pub fn duration(hz: Hertz, cycles: u32) -> NanoSecond {
     let cycles = cycles as u64;
     let clk = hz.raw() as u64;
-    let us = cycles.saturating_mul(1_000_000_u64) / clk;
-    MicroSecond::from_ticks(us as u32)
+    let ns = cycles.saturating_mul(1_000_000_000_u64) / clk;
+    NanoSecond::from_ticks(ns as u32)
 }
 
-pub fn cycles(ms: MicroSecond, clk: Hertz) -> u32 {
-    assert!(ms.ticks() > 0);
+pub fn cycles(ns: NanoSecond, clk: Hertz) -> u32 {
+    assert!(ns.ticks() > 0);
     let clk = clk.raw() as u64;
-    let period = ms.ticks() as u64;
-    let cycles = clk.saturating_mul(period) / 1_000_000_u64;
+    let period = ns.ticks() as u64;
+    let cycles = clk.saturating_mul(period) / 1_000_000_000_u64;
     cycles as u32
 }
+
