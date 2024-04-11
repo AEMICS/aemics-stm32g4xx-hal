@@ -1,11 +1,13 @@
 #![no_main]
 #![no_std]
 
+
 //Import the HAL.
 use aemics_stm32g4xx_hal as aemics_hal;
+use aemics_hal::hal_api::delay::DelayNs;
 
 //Import version specific digital logic. (This API changed between embedded-hal v0.2.7 and v1.0.0)
-use aemics_hal::hal::digital::*;
+use aemics_hal::hal_api::digital::*;
 
 use aemics_hal::{
     delay::*,
@@ -39,17 +41,21 @@ fn main() -> ! {
     let mut led = gpiob.pb7.into_push_pull_output();
 
     //Create a delay provider. This is driven by the system timer (SysTick)
-    let mut delay_syst = cp.SYST.delay(&rcc.clocks);
+    //Create a delay provider. This is driven by the system timer (SysTick)
+    let timer2 = dp
+        .TIM2
+        .timer(100.ms(), dp.TIM2, &mut rcc.clocks);
+    let mut delay = DelayFromCountDownTimer::new(timer2);
 
     //Program, toggles the LED on/off at 1Hz.
     loop {
 
         led.set_high().unwrap();
 
-        delay_syst.delay_ms(100);
+        delay.delay_ms(100);
 
         led.set_low().unwrap();
 
-        delay_syst.delay_ms(100);
+        delay.delay_ms(100);
     }
 }
