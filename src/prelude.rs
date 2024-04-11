@@ -1,9 +1,9 @@
-pub use hal_old::digital::v2::*;
-pub use hal_old::prelude::*;
+pub use hal_api_old::digital::v2::*;
+pub use hal_api_old::prelude::*;
 
-pub use hal_old::adc::OneShot as _;
-pub use hal_old::watchdog::Watchdog as _;
-pub use hal_old::watchdog::WatchdogEnable as _;
+pub use hal_api_old::adc::OneShot as _;
+pub use hal_api_old::watchdog::Watchdog as _;
+pub use hal_api_old::watchdog::WatchdogEnable as _;
 
 // pub use crate::analog::adc::AdcExt as _;
 

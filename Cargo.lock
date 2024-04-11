@@ -15,6 +15,7 @@ dependencies = [
  "cortex-m-rt",
  "cortex-m-rtic",
  "cortex-m-semihosting",
+ "custom_hal_api",
  "defmt",
  "defmt-rtt",
  "embedded-dma",
@@ -190,6 +191,14 @@ name = "critical-section"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7059fff8937831a9ae6f0fe4d658ffabf58f2ca96aa9dec1c889f936f705f216"
+
+[[package]]
+name = "custom_hal_api"
+version = "0.1.0"
+dependencies = [
+ "nb 1.1.0",
+ "void",
+]
 
 [[package]]
 name = "defmt"

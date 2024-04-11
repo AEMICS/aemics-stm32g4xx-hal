@@ -271,15 +271,15 @@ macro_rules! gpio {
                 _mode: PhantomData<MODE>,
             }
 
-            impl<MODE> hal::digital::ErrorType for $PXx<Input<MODE>> {
-                type Error = hal::digital::ErrorKind;
+            impl<MODE> hal_api::digital::ErrorType for $PXx<Input<MODE>> {
+                type Error = hal_api::digital::ErrorKind;
             }
 
-            impl<MODE> hal::digital::ErrorType for $PXx<Output<MODE>> {
-                type Error = hal::digital::ErrorKind;
+            impl<MODE> hal_api::digital::ErrorType for $PXx<Output<MODE>> {
+                type Error = hal_api::digital::ErrorKind;
             }
 
-            impl<MODE> hal_old::digital::v2::OutputPin for $PXx<Output<MODE>> {
+            impl<MODE> hal_api_old::digital::v2::OutputPin for $PXx<Output<MODE>> {
                 type Error = ();
 
                 fn set_high(&mut self) -> Result<(), ()> {
@@ -295,7 +295,7 @@ macro_rules! gpio {
                 }
             }
 
-            impl<MODE> hal::digital::OutputPin for $PXx<Output<MODE>> {
+            impl<MODE> hal_api::digital::OutputPin for $PXx<Output<MODE>> {
 
                 fn set_high(&mut self) -> Result<(), Self::Error> {
                     // NOTE(unsafe) atomic write to a stateless register
@@ -310,7 +310,7 @@ macro_rules! gpio {
                 }
             }
 
-            impl<MODE> hal_old::digital::v2::StatefulOutputPin for $PXx<Output<MODE>> {
+            impl<MODE> hal_api_old::digital::v2::StatefulOutputPin for $PXx<Output<MODE>> {
                 fn is_set_high(&self) -> Result<bool, ()> {
                     let is_set_high = !self.is_set_low()?;
                     Ok(is_set_high)
@@ -323,7 +323,7 @@ macro_rules! gpio {
                 }
             }
 
-            impl<MODE> hal::digital::StatefulOutputPin for $PXx<Output<MODE>> {
+            impl<MODE> hal_api::digital::StatefulOutputPin for $PXx<Output<MODE>> {
                 fn is_set_high(&mut self) -> Result<bool, Self::Error> {
                     let is_set_high = !self.is_set_low()?;
                     Ok(is_set_high)
@@ -336,10 +336,10 @@ macro_rules! gpio {
                 }
             }
 
-            impl<MODE> hal_old::digital::v2::toggleable::Default for $PXx<Output<MODE>> {
+            impl<MODE> hal_api_old::digital::v2::toggleable::Default for $PXx<Output<MODE>> {
             }
 
-            impl<MODE> hal_old::digital::v2::InputPin for $PXx<Output<MODE>> {
+            impl<MODE> hal_api_old::digital::v2::InputPin for $PXx<Output<MODE>> {
                 type Error = ();
 
                 fn is_high(&self) -> Result<bool, ()> {
@@ -354,7 +354,7 @@ macro_rules! gpio {
                 }
             }
 
-            impl<MODE> hal::digital::InputPin for $PXx<Output<MODE>> {
+            impl<MODE> hal_api::digital::InputPin for $PXx<Output<MODE>> {
 
                 fn is_high(&mut self) -> Result<bool, Self::Error> {
                     let is_high = !self.is_low()?;
@@ -368,7 +368,7 @@ macro_rules! gpio {
                 }
             }
 
-            impl<MODE> hal_old::digital::v2::InputPin for $PXx<Input<MODE>> {
+            impl<MODE> hal_api_old::digital::v2::InputPin for $PXx<Input<MODE>> {
                 type Error = ();
 
                 fn is_high(&self) -> Result<bool, ()> {
@@ -383,7 +383,7 @@ macro_rules! gpio {
                 }
             }
 
-            impl<MODE> hal::digital::InputPin for $PXx<Input<MODE>> {
+            impl<MODE> hal_api::digital::InputPin for $PXx<Input<MODE>> {
 
                 fn is_high(&mut self) -> Result<bool, Self::Error> {
                     let is_high = !self.is_low()?;
@@ -627,15 +627,15 @@ macro_rules! gpio {
                     }
                 }
 
-                impl<MODE> hal::digital::ErrorType for $PXi<Input<MODE>> {
-                    type Error = hal::digital::ErrorKind;
+                impl<MODE> hal_api::digital::ErrorType for $PXi<Input<MODE>> {
+                    type Error = hal_api::digital::ErrorKind;
                 }
 
-                impl<MODE> hal::digital::ErrorType for $PXi<Output<MODE>> {
-                    type Error = hal::digital::ErrorKind;
+                impl<MODE> hal_api::digital::ErrorType for $PXi<Output<MODE>> {
+                    type Error = hal_api::digital::ErrorKind;
                 }
 
-                impl<MODE> hal_old::digital::v2::OutputPin for $PXi<Output<MODE>> {
+                impl<MODE> hal_api_old::digital::v2::OutputPin for $PXi<Output<MODE>> {
                     type Error = ();
 
                     fn set_high(&mut self) -> Result<(), ()> {
@@ -651,7 +651,7 @@ macro_rules! gpio {
                     }
                 }
 
-                impl<MODE> hal::digital::OutputPin for $PXi<Output<MODE>> {
+                impl<MODE> hal_api::digital::OutputPin for $PXi<Output<MODE>> {
 
                     fn set_high(&mut self) -> Result<(), Self::Error> {
                         // NOTE(unsafe) atomic write to a stateless register
@@ -666,7 +666,7 @@ macro_rules! gpio {
                     }
                 }
 
-                impl<MODE> hal_old::digital::v2::StatefulOutputPin for $PXi<Output<MODE>> {
+                impl<MODE> hal_api_old::digital::v2::StatefulOutputPin for $PXi<Output<MODE>> {
                     fn is_set_high(&self) -> Result<bool, ()> {
                         let is_set_high = !self.is_set_low()?;
                         Ok(is_set_high)
@@ -679,7 +679,7 @@ macro_rules! gpio {
                     }
                 }
 
-                impl<MODE> hal::digital::StatefulOutputPin for $PXi<Output<MODE>> {
+                impl<MODE> hal_api::digital::StatefulOutputPin for $PXi<Output<MODE>> {
                     fn is_set_high(&mut self) -> Result<bool, Self::Error> {
                         let is_set_high = !self.is_set_low()?;
                         Ok(is_set_high)
@@ -692,10 +692,10 @@ macro_rules! gpio {
                     }
                 }
 
-                impl<MODE> hal_old::digital::v2::toggleable::Default for $PXi<Output<MODE>> {
+                impl<MODE> hal_api_old::digital::v2::toggleable::Default for $PXi<Output<MODE>> {
                 }
 
-                impl<MODE> hal_old::digital::v2::InputPin for $PXi<Output<MODE>> {
+                impl<MODE> hal_api_old::digital::v2::InputPin for $PXi<Output<MODE>> {
                     type Error = ();
 
                     fn is_high(&self) -> Result<bool, ()> {
@@ -710,7 +710,7 @@ macro_rules! gpio {
                     }
                 }
 
-                impl<MODE> hal::digital::InputPin for $PXi<Output<MODE>> {
+                impl<MODE> hal_api::digital::InputPin for $PXi<Output<MODE>> {
 
                     fn is_high(&mut self) -> Result<bool, Self::Error> {
                         let is_high = !self.is_low()?;
@@ -734,7 +734,7 @@ macro_rules! gpio {
                     }
                 }
 
-                impl<MODE> hal_old::digital::v2::InputPin for $PXi<Input<MODE>> {
+                impl<MODE> hal_api_old::digital::v2::InputPin for $PXi<Input<MODE>> {
                     type Error = ();
 
                     fn is_high(&self) -> Result<bool, ()> {
@@ -749,7 +749,7 @@ macro_rules! gpio {
                     }
                 }
 
-                impl<MODE> hal::digital::InputPin for $PXi<Input<MODE>> {
+                impl<MODE> hal_api::digital::InputPin for $PXi<Input<MODE>> {
 
                     fn is_high(&mut self) -> Result<bool, Self::Error> {
                         let is_high = !self.is_low()?;

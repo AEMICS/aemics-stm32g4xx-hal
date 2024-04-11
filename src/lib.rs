@@ -29,8 +29,9 @@ extern crate bare_metal;
 extern crate void;
 
 pub extern crate cortex_m;
-pub extern crate embedded_hal_1 as hal;
-pub extern crate embedded_hal_02 as hal_old;
+pub extern crate embedded_hal_1 as hal_api;
+pub extern crate embedded_hal_02 as hal_api_old;
+pub extern crate custom_hal_api as hal_api_custom;
 pub extern crate nb;
 pub extern crate stm32g4;
 

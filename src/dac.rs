@@ -12,7 +12,7 @@ use crate::gpio::gpioa::{PA4, PA5, PA6};
 use crate::gpio::DefaultMode;
 use crate::rcc::{self, *};
 use crate::stm32::{DAC1, DAC2, DAC3, DAC4, RCC};
-use hal_old::blocking::delay::DelayUs;
+use hal_api_old::blocking::delay::DelayUs;
 
 pub trait DacOut<V> {
     fn set_value(&mut self, val: V);

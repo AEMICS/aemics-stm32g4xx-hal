@@ -24,7 +24,7 @@ use crate::time::Hertz;
 use core::cell::UnsafeCell;
 use core::ptr;
 
-pub use hal_old::spi::{Mode, Phase, Polarity, MODE_0, MODE_1, MODE_2, MODE_3};
+pub use hal_api_old::spi::{Mode, Phase, Polarity, MODE_0, MODE_1, MODE_2, MODE_3};
 
 /// SPI error
 #[derive(Debug)]
@@ -191,7 +191,7 @@ macro_rules! spi {
                 }
         }
 
-        impl<PINS> hal_old::spi::FullDuplex<u8> for Spi<$SPIX, PINS> {
+        impl<PINS> hal_api_old::spi::FullDuplex<u8> for Spi<$SPIX, PINS> {
             type Error = Error;
 
             fn read(&mut self) -> nb::Result<u8, Error> {
@@ -246,9 +246,9 @@ macro_rules! spi {
         }
 
 
-        impl<PINS> ::hal_old::blocking::spi::transfer::Default<u8> for Spi<$SPIX, PINS> {}
+        impl<PINS> ::hal_api_old::blocking::spi::transfer::Default<u8> for Spi<$SPIX, PINS> {}
 
-        impl<PINS> ::hal_old::blocking::spi::write::Default<u8> for Spi<$SPIX, PINS> {}
+        impl<PINS> ::hal_api_old::blocking::spi::write::Default<u8> for Spi<$SPIX, PINS> {}
     }
 }
 
