@@ -2,7 +2,7 @@
 /// STM32G4xx MCUs.
 pub use fugit::{
     Duration, ExtU32, HertzU32 as Hertz, HoursDurationU32 as Hour,
-    MicrosDurationU32 as MicroSecond, MinutesDurationU32 as Minute, NanosDurationU32 as NanoSecond,
+    MillisDurationU32 as MilliSecond, MicrosDurationU32 as MicroSecond, MinutesDurationU32 as Minute, NanosDurationU32 as NanoSecond,
     RateExtU32, SecsDurationU32 as Second,
 };
 
@@ -101,14 +101,16 @@ impl U32Ext for u32 {
     }
 }
 
-pub fn duration(hz: Hertz, cycles: u32) -> NanoSecond {
+///Method for calculating the duration of a given cycles in NanoSeconds.
+pub fn duration_ns(hz: Hertz, cycles: u32) -> NanoSecond {
     let cycles = cycles as u64;
     let clk = hz.raw() as u64;
     let ns = cycles.saturating_mul(1_000_000_000_u64) / clk;
     NanoSecond::from_ticks(ns as u32)
 }
 
-pub fn cycles(ns: NanoSecond, clk: Hertz) -> u32 {
+///Method for calculating the amount of cycles needed at a given hertz for a given duration in NanoSeconds
+pub fn cycles_ns(ns: NanoSecond, clk: Hertz) -> u32 {
     assert!(ns.ticks() > 0);
     let clk = clk.raw() as u64;
     let period = ns.ticks() as u64;
@@ -116,3 +118,36 @@ pub fn cycles(ns: NanoSecond, clk: Hertz) -> u32 {
     cycles as u32
 }
 
+///Method for calculating the duration of a given cycles in MicroSeconds.
+pub fn duration_us(hz: Hertz, cycles: u32) -> MicroSecond {
+    let cycles = cycles as u64;
+    let clk = hz.raw() as u64;
+    let ns = cycles.saturating_mul(1_000_000_u64) / clk;
+    MicroSecond::from_ticks(ns as u32)
+}
+
+///Method for calculating the amount of cycles needed at a given hertz for a given duration in MicroSeconds
+pub fn cycles_us(ns: MicroSecond, clk: Hertz) -> u32 {
+    assert!(ns.ticks() > 0);
+    let clk = clk.raw() as u64;
+    let period = ns.ticks() as u64;
+    let cycles = clk.saturating_mul(period) / 1_000_000_u64;
+    cycles as u32
+}
+
+///Method for calculating the duration of a given cycles in MilliSeconds.
+pub fn duration_ms(hz: Hertz, cycles: u32) -> MilliSecond {
+    let cycles = cycles as u64;
+    let clk = hz.raw() as u64;
+    let ns = cycles.saturating_mul(1_000_u64) / clk;
+    MilliSecond::from_ticks(ns as u32)
+}
+
+///Method for calculating the amount of cycles needed at a given hertz for a given duration in MilliSeconds
+pub fn cycles_ms(ns: MilliSecond, clk: Hertz) -> u32 {
+    assert!(ns.ticks() > 0);
+    let clk = clk.raw() as u64;
+    let period = ns.ticks() as u64;
+    let cycles = clk.saturating_mul(period) / 1_000_u64;
+    cycles as u32
+}

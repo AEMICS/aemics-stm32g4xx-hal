@@ -115,7 +115,7 @@ impl hal_api_custom::timer::CountDown for CountDownTimer<SYST> {
         where
             T: Into<NanoSecond>,
     {
-        let rvr = crate::time::cycles(timeout.into(), self.clk) - 1;
+        let rvr = crate::time::cycles_ns(timeout.into(), self.clk) - 1;
 
         assert!(rvr < (1 << 24));
 
@@ -133,9 +133,10 @@ impl hal_api_custom::timer::CountDown for CountDownTimer<SYST> {
     }
 }
 
+
 impl CountDown for CountDownTimer<SYST> {
     fn max_period(&self) -> NanoSecond {
-        crate::time::duration(self.clk, (1 << 24) - 1)
+        crate::time::duration_ns(self.clk, (1 << 24) - 1)
     }
 }
 
@@ -301,7 +302,7 @@ macro_rules! tim_u16 {
                     // reset counter
                     self.tim.cnt.reset();
 
-                    let ticks = crate::time::cycles(timeout.into(), self.clk);
+                    let ticks = crate::time::cycles_ns(timeout.into(), self.clk);
 
                     let psc = u16((ticks - 1) / (1 << 16)).unwrap();
                     self.tim.psc.write(|w| unsafe {w.psc().bits(psc)} );
@@ -332,7 +333,7 @@ macro_rules! tim_u16 {
             impl CountDown for CountDownTimer<$TIM> {
                 fn max_period(&self) -> NanoSecond {
                     // TODO: TIM2 and TIM5 are 32 bit
-                    crate::time::duration(self.clk, u16::MAX as u32)
+                    crate::time::duration_ns(self.clk, u16::MAX as u32)
                 }
             }
 
@@ -419,7 +420,7 @@ macro_rules! tim_u32 {
                     // reset counter
                     self.tim.cnt.reset();
 
-                    let ticks = crate::time::cycles(timeout.into(), self.clk);
+                    let ticks = crate::time::cycles_ns(timeout.into(), self.clk);
 
                     let psc = u16((ticks - 1) / (1 << 16)).unwrap();
                     self.tim.psc.write(|w| unsafe {w.psc().bits(psc)} );
@@ -450,7 +451,7 @@ macro_rules! tim_u32 {
             impl CountDown for CountDownTimer<$TIM> {
                 fn max_period(&self) -> NanoSecond {
                     // TODO: TIM2 and TIM5 are 32 bit
-                    crate::time::duration(self.clk, u32::MAX as u32)
+                    crate::time::duration_ns(self.clk, u32::MAX as u32)
                 }
             }
 
