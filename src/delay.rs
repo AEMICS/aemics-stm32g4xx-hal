@@ -37,23 +37,29 @@
 //! ```
 
 use crate::rcc::Clocks;
-use crate::time::{NanoSecond};
+use crate::time::{MicroSecond, MilliSecond, NanoSecond};
 pub use cortex_m::delay::*;
 use cortex_m::peripheral::SYST;
 
 use crate::nb::block;
 use crate::time::ExtU32;
 use hal_api::delay::DelayNs;
-//use hal_api_old::blocking::delay::{DelayUs, DelayMs};
+use hal_api_old::blocking::delay::{DelayUs, DelayMs};
 
-/*
+pub trait CountDown_ns: hal_api_custom::timer::CountDown<NanoSecond> {
+    fn max_period(&self) -> NanoSecond;
+}
+
 pub trait CountDownCompat: hal_api_old::timer::CountDown {
     fn max_period(&self) -> MicroSecond;
 }
-*/
 
-pub trait CountDown: hal_api_custom::timer::CountDown {
-    fn max_period(&self) -> NanoSecond;
+pub trait CountDown_us: hal_api_custom::timer::CountDown<MicroSecond> {
+    fn max_period(&self) -> MicroSecond;
+}
+
+pub trait CountDown_ms: hal_api_custom::timer::CountDown<MilliSecond> {
+    fn max_period(&self) -> MilliSecond;
 }
 
 pub trait SYSTDelayExt {
@@ -65,19 +71,40 @@ impl SYSTDelayExt for SYST {
         Delay::new(self, clocks.ahb_clk.raw())
     }
 }
-
 pub trait DelayExt {
-    fn delay<T>(&mut self, delay: T)
-    where
-        T: Into<NanoSecond>;
+    fn delay_ns<T>(&mut self, delay: T)
+        where
+            T: Into<NanoSecond>;
+
+    fn delay_us<T>(&mut self, delay: T)
+        where
+            T: Into<MicroSecond>;
+
+    fn delay_ms<T>(&mut self, delay: T)
+        where
+            T: Into<MilliSecond>;
 }
 
 impl DelayExt for Delay {
-    fn delay<T>(&mut self, delay: T)
-    where
-        T: Into<NanoSecond>,
+    fn delay_ns<T>(&mut self, delay: T)
+        where
+            T: Into<NanoSecond>,
     {
-        self.delay_us(delay.into().ticks())
+        self.delay_ns(delay)
+    }
+
+    fn delay_us<T>(&mut self, delay: T)
+        where
+            T: Into<MicroSecond>,
+    {
+        self.delay_us(delay)
+    }
+
+    fn delay_ms<T>(&mut self, delay: T)
+        where
+            T: Into<MilliSecond>,
+    {
+        self.delay_ms(delay)
     }
 }
 
@@ -97,36 +124,32 @@ impl<T> DelayFromCountDownTimer<T> {
 }
 
 macro_rules! impl_delay_from_count_down_timer  {
-     ($Delay:ident, [
-        $(($delay:ident, $num:expr),)+
-    ]) => {
+     ($Delay:ident, NanoSecond, $delay:ident ) => {
         impl<T> $Delay for DelayFromCountDownTimer<T>
         where
-            T: CountDown<Time = NanoSecond>,
+            T: CountDown_ns<Time = NanoSecond>,
         {
-            $(
-
             fn $delay(&mut self, t: u32) {
-                let mut time_left_ns = t as u64 * $num;
+                let mut time_left = t as u64;
 
                 let max_sleep = self.0.max_period();
-                let max_sleep_ns = max_sleep.to_nanos() as u64;
+                let max_sleep = max_sleep.to_nanos() as u64;
 
-                if time_left_ns > max_sleep_ns {
+                if time_left > max_sleep {
                     self.0.start(max_sleep);
 
                     // Process the time one max_sleep duration at a time
                     // to avoid overflowing both u32 and the timer
-                    for _ in 0..(time_left_ns / max_sleep_ns) {
+                    for _ in 0..(time_left / max_sleep) {
                         block!(self.0.wait()).ok();
-                        time_left_ns -= max_sleep_ns;
+                        time_left -= max_sleep;
                     }
                 }
 
-                assert!(time_left_ns <= u32::MAX as u64);
-                assert!(time_left_ns <= max_sleep_ns);
+                assert!(time_left <= u32::MAX as u64);
+                assert!(time_left <= max_sleep);
 
-                let time_left: NanoSecond = (time_left_ns as u32).nanos();
+                let time_left: NanoSecond = (time_left as u32).nanos();
 
                 // Only sleep
                 if time_left.ticks() > 0 {
@@ -134,53 +157,175 @@ macro_rules! impl_delay_from_count_down_timer  {
                     block!(self.0.wait()).ok();
                 }
             }
-            )+
         }
-    }
+    };
+
+    ($Delay:ident, MicroSecond, $delay:ident ) => {
+        impl<T> $Delay for DelayFromCountDownTimer<T>
+        where
+            T: CountDown_us<Time = MicroSecond>,
+        {
+            fn $delay(&mut self, t: u32) {
+                let mut time_left = t as u64;
+
+                let max_sleep = self.0.max_period();
+                let max_sleep = max_sleep.to_micros() as u64;
+
+                if time_left > max_sleep {
+                    self.0.start(max_sleep);
+
+                    // Process the time one max_sleep duration at a time
+                    // to avoid overflowing both u32 and the timer
+                    for _ in 0..(time_left / max_sleep) {
+                        block!(self.0.wait()).ok();
+                        time_left -= max_sleep;
+                    }
+                }
+
+                assert!(time_left <= u32::MAX as u64);
+                assert!(time_left <= max_sleep);
+
+                let time_left: MicroSecond = (time_left as u32).micros();
+
+                // Only sleep
+                if time_left.ticks() > 0 {
+                    self.0.start(time_left);
+                    block!(self.0.wait()).ok();
+                }
+            }
+        }
+    };
+
+    ($Delay:ident, MilliSecond, $delay:ident ) => {
+        impl<T> $Delay for DelayFromCountDownTimer<T>
+        where
+            T: CountDown_ms<Time = MilliSecond>,
+        {
+            fn $delay(&mut self, t: u32) {
+                let mut time_left = t as u64;
+
+                let max_sleep = self.0.max_period();
+                let max_sleep = max_sleep.to_millis() as u64;
+
+                if time_left > max_sleep {
+                    self.0.start(max_sleep);
+
+                    // Process the time one max_sleep duration at a time
+                    // to avoid overflowing both u32 and the timer
+                    for _ in 0..(time_left / max_sleep) {
+                        block!(self.0.wait()).ok();
+                        time_left -= max_sleep;
+                    }
+                }
+
+                assert!(time_left <= u32::MAX as u64);
+                assert!(time_left <= max_sleep);
+
+                let time_left: MilliSecond = (time_left as u32).millis();
+
+                // Only sleep
+                if time_left.ticks() > 0 {
+                    self.0.start(time_left);
+                    block!(self.0.wait()).ok();
+                }
+            }
+        }
+    };
 }
 
-/*
 macro_rules! impl_delay_from_count_down_timer_old  {
-      ($(($Delay:ident, $delay:ident, $num:expr)),+) => {
-        $(
+    ($Delay:ident, MicroSecond, $delay:ident ) => {
+        impl<T> $Delay<u32> for DelayFromCountDownTimer<T>
+        where
+            T: CountDown_us<Time = MicroSecond>,
+        {
+            fn $delay(&mut self, t: u32) {
+                let mut time_left = t as u64;
 
-            impl<T> $Delay<u32> for DelayFromCountDownTimer<T>
-            where
-                T: CountDown<Time = MicroSecond>,
-            {
-                fn $delay(&mut self, t: u32) {
-                    let mut time_left_us = t as u64 * $num;
+                let max_sleep = self.0.max_period();
+                let max_sleep = max_sleep.to_micros() as u64;
 
-                    let max_sleep = self.0.max_period();
-                    let max_sleep_us = max_sleep.to_micros() as u64;
+                if time_left > max_sleep {
+                    self.0.start(max_sleep);
 
-                    if time_left_us > max_sleep_us {
-                        self.0.start(max_sleep);
-
-                        // Process the time one max_sleep duration at a time
-                        // to avoid overflowing both u32 and the timer
-                        for _ in 0..(time_left_us / max_sleep_us) {
-                            block!(self.0.wait()).ok();
-                            time_left_us -= max_sleep_us;
-                        }
-                    }
-
-                    assert!(time_left_us <= u32::MAX as u64);
-                    assert!(time_left_us <= max_sleep_us);
-
-                    let time_left: MicroSecond = (time_left_us as u32).micros();
-
-                    // Only sleep
-                    if time_left.ticks() > 0 {
-                        self.0.start(time_left);
+                    // Process the time one max_sleep duration at a time
+                    // to avoid overflowing both u32 and the timer
+                    for _ in 0..(time_left / max_sleep) {
                         block!(self.0.wait()).ok();
+                        time_left -= max_sleep;
                     }
+                }
+
+                assert!(time_left <= u32::MAX as u64);
+                assert!(time_left <= max_sleep);
+
+                let time_left: MicroSecond = (time_left as u32).micros();
+
+                // Only sleep
+                if time_left.ticks() > 0 {
+                    self.0.start(time_left);
+                    block!(self.0.wait()).ok();
+                }
+            }
+        }
+
+        impl<T> $Delay<u16> for DelayFromCountDownTimer<T>
+            where
+                T: CountDown_us<Time = MicroSecond>,
+            {
+                fn $delay(&mut self, t: u16) {
+                    self.$delay(t as u32);
                 }
             }
 
-            impl<T> $Delay<u16> for DelayFromCountDownTimer<T>
+        impl<T> $Delay<u8> for DelayFromCountDownTimer<T>
             where
-                T: CountDown<Time = MicroSecond>,
+                T: CountDown_us<Time = MicroSecond>,
+            {
+                fn $delay(&mut self, t: u8) {
+                    self.$delay(t as u32);
+                }
+            }
+    };
+
+    ($Delay:ident, MilliSecond, $delay:ident ) => {
+        impl<T> $Delay<u32> for DelayFromCountDownTimer<T>
+        where
+            T: CountDown_ms<Time = MilliSecond>,
+        {
+            fn $delay(&mut self, t: u32) {
+                let mut time_left = t as u64;
+
+                let max_sleep = self.0.max_period();
+                let max_sleep = max_sleep.to_millis() as u64;
+
+                if time_left > max_sleep {
+                    self.0.start(max_sleep);
+
+                    // Process the time one max_sleep duration at a time
+                    // to avoid overflowing both u32 and the timer
+                    for _ in 0..(time_left / max_sleep) {
+                        block!(self.0.wait()).ok();
+                        time_left -= max_sleep;
+                    }
+                }
+
+                assert!(time_left <= u32::MAX as u64);
+                assert!(time_left <= max_sleep);
+
+                let time_left: MilliSecond = (time_left as u32).millis();
+
+                // Only sleep
+                if time_left.ticks() > 0 {
+                    self.0.start(time_left);
+                    block!(self.0.wait()).ok();
+                }
+            }
+        }
+
+        impl<T> $Delay<u16> for DelayFromCountDownTimer<T>
+            where
+                T: CountDown_ms<Time = MilliSecond>,
             {
                 fn $delay(&mut self, t: u16) {
                     self.$delay(t as u32);
@@ -189,29 +334,25 @@ macro_rules! impl_delay_from_count_down_timer_old  {
 
             impl<T> $Delay<u8> for DelayFromCountDownTimer<T>
             where
-                T: CountDown<Time = MicroSecond>,
+                T: CountDown_ms<Time = MilliSecond>,
             {
                 fn $delay(&mut self, t: u8) {
                     self.$delay(t as u32);
                 }
             }
-        )+
-    }
+    };
 }
-*/
 
-
+//If im correct only the nanosecond delay needs to be implemented as the HAL api already converts to ms / us.
 impl_delay_from_count_down_timer! {
-    DelayNs, [
-        (delay_ms, 1_000_000),
-        (delay_us, 1_000),
-        (delay_ns, 1),
-    ]
+    DelayNs, NanoSecond, delay_ns
 }
 
-/*
+//Implementing API 0.2.7
 impl_delay_from_count_down_timer_old! {
-    (DelayMs, delay_ms, 1_000),
-    (DelayUs, delay_us, 1_000_000)
+    DelayUs, MicroSecond, delay_us
 }
-*/
+
+impl_delay_from_count_down_timer_old! {
+    DelayMs, MilliSecond, delay_ms
+}
