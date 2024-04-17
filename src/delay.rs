@@ -46,7 +46,7 @@ use crate::time::ExtU32;
 use hal_api::delay::DelayNs;
 use hal_api_old::blocking::delay::{DelayUs, DelayMs};
 
-pub trait CountDown_ns: hal_api_custom::timer::CountDown<NanoSecond> {
+pub trait CountDown_ns: hal_api_custom::timer::CountDown {
     fn max_period(&self) -> NanoSecond;
 }
 
@@ -54,11 +54,11 @@ pub trait CountDownCompat: hal_api_old::timer::CountDown {
     fn max_period(&self) -> MicroSecond;
 }
 
-pub trait CountDown_us: hal_api_custom::timer::CountDown<MicroSecond> {
+pub trait CountDown_us: hal_api_custom::timer::CountDown {
     fn max_period(&self) -> MicroSecond;
 }
 
-pub trait CountDown_ms: hal_api_custom::timer::CountDown<MilliSecond> {
+pub trait CountDown_ms: hal_api_custom::timer::CountDown {
     fn max_period(&self) -> MilliSecond;
 }
 
@@ -71,10 +71,12 @@ impl SYSTDelayExt for SYST {
         Delay::new(self, clocks.ahb_clk.raw())
     }
 }
+
+//Until the cortex-m crate starts supporting HAL 1.0, this is the best we can do. NanoSecond accurate delays are unsupported by this crate.
+//TODO: If time allows, make custom fork of cortex-m crate and update to current HAL version.
+
+//NOTE: This entire hal is structured terribly. Everything links back to everything else. Oh well, too bad.
 pub trait DelayExt {
-    fn delay_ns<T>(&mut self, delay: T)
-        where
-            T: Into<NanoSecond>;
 
     fn delay_us<T>(&mut self, delay: T)
         where
@@ -86,25 +88,19 @@ pub trait DelayExt {
 }
 
 impl DelayExt for Delay {
-    fn delay_ns<T>(&mut self, delay: T)
-        where
-            T: Into<NanoSecond>,
-    {
-        self.delay_ns(delay)
-    }
 
     fn delay_us<T>(&mut self, delay: T)
         where
             T: Into<MicroSecond>,
     {
-        self.delay_us(delay)
+        self.delay_us(delay.into().to_micros())
     }
 
     fn delay_ms<T>(&mut self, delay: T)
         where
             T: Into<MilliSecond>,
     {
-        self.delay_ms(delay)
+        self.delay_ms(delay.into().to_millis())
     }
 }
 
