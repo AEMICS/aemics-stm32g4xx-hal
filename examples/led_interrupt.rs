@@ -50,7 +50,7 @@ fn main() -> ! {
     let timer2 = Timer::new(dp.TIM2, &rcc.clocks);
 
     //Timer starten
-    let mut timer2_i = timer2.start_count_down(2.secs());
+    let mut timer2_i = timer2.start_count_down_ms(5000.millis());
     timer2_i.listen(Event::TimeOut);
 
     cortex_m::interrupt::free(|cs| TIMER_TIM2.borrow(cs).borrow_mut().replace(timer2_i));

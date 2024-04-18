@@ -3,17 +3,18 @@
 //! Pins can be used for PWM output in both push-pull mode (`Alternate`) and open-drain mode
 //! (`AlternateOD`).
 
-use crate::delay::CountDown;
+use crate::delay::{CountDown_ns, CountDown_us, CountDown_ms, CountDownCompat};
 use cast::{u16, u32};
 use cortex_m::peripheral::syst::SystClkSource;
 use cortex_m::peripheral::{DCB, DWT, SYST};
-use hal_api_custom::timer::{Cancel, CountDown as _, Periodic};
+use hal_api_old::timer::{CountDown};
+use hal_api_custom::timer::{CountDownNs, CountDownUs, CountDownMs};
 use void::Void;
 
 use crate::stm32::RCC;
 
 use crate::rcc::{self, Clocks};
-use crate::time::{Hertz, MicroSecond, NanoSecond}; //TODO [ISSUE]: Only supporting the NanoSecond duration as a duration for the timer is bad. This limits countdowns to only 4.29 seconds.
+use crate::time::{Hertz, NanoSecond, MicroSecond, MilliSecond};
 
 /// Timer wrapper
 pub struct Timer<TIM> {
@@ -29,7 +30,23 @@ pub struct CountDownTimer<TIM> {
 
 impl<TIM> Timer<TIM>
     where
-        CountDownTimer<TIM>: CountDown<Time = NanoSecond>,
+        CountDownTimer<TIM>: CountDownCompat<Time = MicroSecond>,
+{
+    /// Starts timer in count down mode at a given frequency
+    pub fn start_count_down<T>(self, timeout: T) -> CountDownTimer<TIM>
+        where
+            T: Into<MicroSecond>,
+    {
+        let Self { tim, clk } = self;
+        let mut timer = CountDownTimer { tim, clk };
+        timer.start(timeout);
+        timer
+    }
+}
+
+impl<TIM> Timer<TIM>
+    where
+        CountDownTimer<TIM>: CountDown_ns<Time = NanoSecond>,
 {
     /// Starts timer in count down mode at a given frequency
     pub fn start_count_down_ns<T>(self, timeout: T) -> CountDownTimer<TIM>
@@ -43,7 +60,39 @@ impl<TIM> Timer<TIM>
     }
 }
 
-impl<TIM> Periodic for CountDownTimer<TIM> {}
+impl<TIM> Timer<TIM>
+    where
+        CountDownTimer<TIM>: CountDown_us<Time = MicroSecond>,
+{
+    /// Starts timer in count down mode at a given frequency
+    pub fn start_count_down_us<T>(self, timeout: T) -> CountDownTimer<TIM>
+        where
+            T: Into<MicroSecond>,
+    {
+        let Self { tim, clk } = self;
+        let mut timer = CountDownTimer { tim, clk };
+        timer.start(timeout);
+        timer
+    }
+}
+
+impl<TIM> Timer<TIM>
+    where
+        CountDownTimer<TIM>: CountDown_ms<Time = MilliSecond>,
+{
+    /// Starts timer in count down mode at a given frequency
+    pub fn start_count_down_ms<T>(self, timeout: T) -> CountDownTimer<TIM>
+        where
+            T: Into<MilliSecond>,
+    {
+        let Self { tim, clk } = self;
+        let mut timer = CountDownTimer { tim, clk };
+        timer.start(timeout);
+        timer
+    }
+}
+
+impl<TIM> hal_api_old::timer::Periodic for CountDownTimer<TIM> {}
 
 /// Interrupt events
 pub enum Event {
@@ -108,7 +157,48 @@ impl CountDownTimer<SYST> {
     }
 }
 
+trait SharedWait {
+    fn shared_wait(&mut self) -> nb::Result<(), Void>;
+}
+
+impl SharedWait for CountDownTimer<SYST> {
+    fn shared_wait(&mut self) -> nb::Result<(), Void> {
+        if self.tim.has_wrapped() {
+            Ok(())
+        } else {
+            Err(nb::Error::WouldBlock)
+        }
+    }
+}
+
+impl hal_api_old::timer::CountDown for CountDownTimer<SYST> {
+    type Time = MicroSecond;
+
+    fn start<T>(&mut self, timeout: T)
+        where
+            T: Into<MicroSecond>,
+    {
+        let rvr = crate::time::cycles_us(timeout.into(), self.clk) - 1;
+
+        assert!(rvr < (1 << 24));
+
+        self.tim.set_reload(rvr);
+        self.tim.clear_current();
+        self.tim.enable_counter();
+    }
+
+    fn wait(&mut self) -> nb::Result<(), Void> {
+        self.shared_wait()
+    }
+}
+
 impl hal_api_custom::timer::CountDown for CountDownTimer<SYST> {
+    fn wait(&mut self) -> nb::Result<(), Void> {
+        self.shared_wait()
+    }
+}
+
+impl hal_api_custom::timer::CountDownNs for CountDownTimer<SYST> {
     type Time = NanoSecond;
 
     fn start<T>(&mut self, timeout: T)
@@ -123,27 +213,69 @@ impl hal_api_custom::timer::CountDown for CountDownTimer<SYST> {
         self.tim.clear_current();
         self.tim.enable_counter();
     }
+}
 
-    fn wait(&mut self) -> nb::Result<(), Void> {
-        if self.tim.has_wrapped() {
-            Ok(())
-        } else {
-            Err(nb::Error::WouldBlock)
-        }
+impl hal_api_custom::timer::CountDownUs for CountDownTimer<SYST> {
+    type Time = MicroSecond;
+
+    fn start<T>(&mut self, timeout: T)
+        where
+            T: Into<MicroSecond>,
+    {
+        let rvr = crate::time::cycles_us(timeout.into(), self.clk) - 1;
+
+        assert!(rvr < (1 << 24));
+
+        self.tim.set_reload(rvr);
+        self.tim.clear_current();
+        self.tim.enable_counter();
     }
 }
 
+impl hal_api_custom::timer::CountDownMs for CountDownTimer<SYST> {
+    type Time = MilliSecond;
 
-impl CountDown for CountDownTimer<SYST> {
-    fn max_period(&self) -> NanoSecond {
-        crate::time::duration_ns(self.clk, (1 << 24) - 1)
+    fn start<T>(&mut self, timeout: T)
+        where
+            T: Into<MilliSecond>,
+    {
+        let rvr = crate::time::cycles_ms(timeout.into(), self.clk) - 1;
+
+        assert!(rvr < (1 << 24));
+
+        self.tim.set_reload(rvr);
+        self.tim.clear_current();
+        self.tim.enable_counter();
     }
 }
 
-impl Cancel for CountDownTimer<SYST> {
+impl CountDownCompat for CountDownTimer<SYST> {
+    fn max_period(&self) -> MicroSecond {
+        crate::time::duration_us(self.clk, (1 << 24) - 1)
+    }
+}
+
+impl CountDown_ns for CountDownTimer<SYST> {
+    fn max_period(&self) -> NanoSecond { crate::time::duration_ns(self.clk, (1 << 24) - 1) }
+}
+
+impl CountDown_us for CountDownTimer<SYST> {
+    fn max_period(&self) -> MicroSecond { crate::time::duration_us(self.clk, (1 << 24) - 1) }
+}
+
+impl CountDown_ms for CountDownTimer<SYST> {
+    fn max_period(&self) -> MilliSecond { crate::time::duration_ms(self.clk, (1 << 24) - 1) }
+}
+
+trait SharedCancel
+{
+    type Error;
+    fn shared_cancel(&mut self) -> Result<(), Self::Error>;
+}
+
+impl SharedCancel for CountDownTimer<SYST> {
     type Error = Error;
-
-    fn cancel(&mut self) -> Result<(), Self::Error> {
+    fn shared_cancel(&mut self) -> Result<(), Self::Error> {
         if !self.tim.is_counter_enabled() {
             return Err(Self::Error::Disabled);
         }
@@ -152,6 +284,24 @@ impl Cancel for CountDownTimer<SYST> {
         Ok(())
     }
 }
+
+impl hal_api_old::timer::Cancel for CountDownTimer<SYST> {
+    type Error = Error;
+
+    fn cancel(&mut self) -> Result<(), Self::Error> {
+        self.shared_cancel()
+    }
+}
+
+impl hal_api_custom::timer::Cancel for CountDownTimer<SYST> {
+    type Error = Error;
+
+    fn cancel(&mut self) -> Result<(), Self::Error> {
+        self.shared_cancel()
+    }
+}
+
+
 
 /// A monotonic non-decreasing timer
 ///
@@ -240,7 +390,96 @@ macro_rules! hal_ext_trgo {
     }
 }
 
-macro_rules! tim_u16 {
+macro_rules! start_func {
+    (NanoSecond) => {
+        fn start<T>(&mut self, timeout: T)
+            where
+                T: Into<NanoSecond>,
+            {
+                // pause
+                self.tim.cr1.modify(|_, w| w.cen().clear_bit());
+                // reset counter
+                self.tim.cnt.reset();
+
+                let ticks = crate::time::cycles_ns(timeout.into(), self.clk);
+
+                let psc = u16((ticks - 1) / (1 << 16)).unwrap();
+                self.tim.psc.write(|w| unsafe {w.psc().bits(psc)} );
+
+                // TODO: TIM2 and TIM5 are 32 bit
+                let arr = u16(ticks / u32(psc + 1)).unwrap();
+                self.tim.arr.write(|w| unsafe { w.bits(u32(arr)) });
+
+                // Trigger update event to load the registers
+                self.tim.cr1.modify(|_, w| w.urs().set_bit());
+                self.tim.egr.write(|w| w.ug().set_bit());
+                self.tim.cr1.modify(|_, w| w.urs().clear_bit());
+
+                // start counter
+                self.tim.cr1.modify(|_, w| w.cen().set_bit());
+            }
+    };
+
+    (MicroSecond) => {
+        fn start<T>(&mut self, timeout: T)
+            where
+                T: Into<MicroSecond>,
+            {
+                // pause
+                self.tim.cr1.modify(|_, w| w.cen().clear_bit());
+                // reset counter
+                self.tim.cnt.reset();
+
+                let ticks = crate::time::cycles_us(timeout.into(), self.clk);
+
+                let psc = u16((ticks - 1) / (1 << 16)).unwrap();
+                self.tim.psc.write(|w| unsafe {w.psc().bits(psc)} );
+
+                // TODO: TIM2 and TIM5 are 32 bit
+                let arr = u16(ticks / u32(psc + 1)).unwrap();
+                self.tim.arr.write(|w| unsafe { w.bits(u32(arr)) });
+
+                // Trigger update event to load the registers
+                self.tim.cr1.modify(|_, w| w.urs().set_bit());
+                self.tim.egr.write(|w| w.ug().set_bit());
+                self.tim.cr1.modify(|_, w| w.urs().clear_bit());
+
+                // start counter
+                self.tim.cr1.modify(|_, w| w.cen().set_bit());
+            }
+    };
+
+    (MilliSecond) => {
+        fn start<T>(&mut self, timeout: T)
+            where
+                T: Into<MilliSecond>,
+            {
+                // pause
+                self.tim.cr1.modify(|_, w| w.cen().clear_bit());
+                // reset counter
+                self.tim.cnt.reset();
+
+                let ticks = crate::time::cycles_ms(timeout.into(), self.clk);
+
+                let psc = u16((ticks - 1) / (1 << 16)).unwrap();
+                self.tim.psc.write(|w| unsafe {w.psc().bits(psc)} );
+
+                // TODO: TIM2 and TIM5 are 32 bit
+                let arr = u16(ticks / u32(psc + 1)).unwrap();
+                self.tim.arr.write(|w| unsafe { w.bits(u32(arr)) });
+
+                // Trigger update event to load the registers
+                self.tim.cr1.modify(|_, w| w.urs().set_bit());
+                self.tim.egr.write(|w| w.ug().set_bit());
+                self.tim.cr1.modify(|_, w| w.urs().clear_bit());
+
+                // start counter
+                self.tim.cr1.modify(|_, w| w.cen().set_bit());
+            }
+    };
+}
+
+macro_rules! hal {
     ($($TIM:ty: ($tim:ident),)+) => {
         $(
             impl Instance for $TIM { }
@@ -290,37 +529,8 @@ macro_rules! tim_u16 {
                 }
             }
 
-            impl hal_api_custom::timer::CountDown for CountDownTimer<$TIM> {
-                type Time = NanoSecond;
-
-                fn start<T>(&mut self, timeout: T)
-                where
-                    T: Into<NanoSecond>,
-                {
-                    // pause
-                    self.tim.cr1.modify(|_, w| w.cen().clear_bit());
-                    // reset counter
-                    self.tim.cnt.reset();
-
-                    let ticks = crate::time::cycles_ns(timeout.into(), self.clk);
-
-                    let psc = u16((ticks - 1) / (1 << 16)).unwrap();
-                    self.tim.psc.write(|w| unsafe {w.psc().bits(psc)} );
-
-                    // TODO: TIM2 and TIM5 are 32 bit
-                    let arr = u16(ticks / u32(psc + 1)).unwrap();
-                    self.tim.arr.write(|w| unsafe { w.bits(u32(arr)) });
-
-                    // Trigger update event to load the registers
-                    self.tim.cr1.modify(|_, w| w.urs().set_bit());
-                    self.tim.egr.write(|w| w.ug().set_bit());
-                    self.tim.cr1.modify(|_, w| w.urs().clear_bit());
-
-                    // start counter
-                    self.tim.cr1.modify(|_, w| w.cen().set_bit());
-                }
-
-                fn wait(&mut self) -> nb::Result<(), Void> {
+            impl SharedWait for CountDownTimer<$TIM> {
+                fn shared_wait(&mut self) -> nb::Result<(), Void> {
                     if self.tim.sr.read().uif().bit_is_clear() {
                         Err(nb::Error::WouldBlock)
                     } else {
@@ -330,19 +540,73 @@ macro_rules! tim_u16 {
                 }
             }
 
-            impl CountDown for CountDownTimer<$TIM> {
+            impl hal_api_old::timer::CountDown for CountDownTimer<$TIM> {
+                type Time = MicroSecond;
+
+                start_func!(MicroSecond);
+
+                fn wait(&mut self) -> nb::Result<(), Void> {
+                    self.shared_wait()
+                }
+            }
+
+            impl hal_api_custom::timer::CountDown for CountDownTimer<$TIM> {
+
+                fn wait(&mut self) -> nb::Result<(), Void> {
+                     self.shared_wait()
+                }
+            }
+
+            impl hal_api_custom::timer::CountDownNs for CountDownTimer<$TIM> {
+
+                type Time = NanoSecond;
+
+                start_func!(NanoSecond);
+            }
+
+            impl hal_api_custom::timer::CountDownUs for CountDownTimer<$TIM> {
+
+                type Time = MicroSecond;
+
+                start_func!(MicroSecond);
+            }
+
+            impl hal_api_custom::timer::CountDownMs for CountDownTimer<$TIM> {
+
+                type Time = MilliSecond;
+
+                start_func!(MilliSecond);
+            }
+
+            // TODO: TIM2 and TIM5 are 32 bit
+            impl CountDownCompat for CountDownTimer<$TIM> {
+                fn max_period(&self) -> MicroSecond {
+                    crate::time::duration_us(self.clk, u16::MAX as u32)
+                }
+            }
+
+            impl CountDown_ns for CountDownTimer<$TIM> {
                 fn max_period(&self) -> NanoSecond {
-                    // TODO: TIM2 and TIM5 are 32 bit
                     crate::time::duration_ns(self.clk, u16::MAX as u32)
                 }
             }
 
-            impl hal_api_custom::timer::Cancel for CountDownTimer<$TIM>
-            {
-                type Error = Error;
+            impl CountDown_us for CountDownTimer<$TIM> {
+                fn max_period(&self) -> MicroSecond {
+                    crate::time::duration_us(self.clk, u16::MAX as u32)
+                }
+            }
 
-                fn cancel(&mut self) -> Result<(), Self::Error> {
-                    // let is_counter_enabled = self.tim.cr1.read().cen().is_enabled();
+            impl CountDown_ms for CountDownTimer<$TIM> {
+                fn max_period(&self) -> MilliSecond {
+                    crate::time::duration_ms(self.clk, u16::MAX as u32)
+                }
+            }
+
+            impl SharedCancel for CountDownTimer<$TIM> {
+                type Error = Error;
+                fn shared_cancel(&mut self) -> Result<(), Self::Error> {
+                   // let is_counter_enabled = self.tim.cr1.read().cen().is_enabled();
                     let is_counter_enabled = self.tim.cr1.read().cen().bit_is_set();
                     if !is_counter_enabled {
                         return Err(Self::Error::Disabled);
@@ -353,105 +617,13 @@ macro_rules! tim_u16 {
                     Ok(())
                 }
             }
-        )+
-    }
-}
 
-macro_rules! tim_u32 {
-    ($($TIM:ty: ($tim:ident),)+) => {
-        $(
-            impl Instance for $TIM { }
+            impl hal_api_old::timer::Cancel for CountDownTimer<$TIM>
+            {
+                type Error = Error;
 
-            impl CountDownTimer<$TIM> {
-                /// Starts listening for an `event`
-                ///
-                /// Note, you will also have to enable the TIM2 interrupt in the NVIC to start
-                /// receiving events.
-                pub fn listen(&mut self, event: Event) {
-                    match event {
-                        Event::TimeOut => {
-                            // Enable update event interrupt
-                            self.tim.dier.write(|w| w.uie().set_bit());
-                        }
-                    }
-                }
-
-                /// Clears interrupt associated with `event`.
-                ///
-                /// If the interrupt is not cleared, it will immediately retrigger after
-                /// the ISR has finished.
-                pub fn clear_interrupt(&mut self, event: Event) {
-                    match event {
-                        Event::TimeOut => {
-                            // Clear interrupt flag
-                            self.tim.sr.write(|w| w.uif().clear_bit());
-                        }
-                    }
-                }
-
-                /// Stops listening for an `event`
-                pub fn unlisten(&mut self, event: Event) {
-                    match event {
-                        Event::TimeOut => {
-                            // Enable update event interrupt
-                            self.tim.dier.write(|w| w.uie().clear_bit());
-                        }
-                    }
-                }
-
-                /// Releases the TIM peripheral
-                pub fn release(self) -> $TIM {
-                    // pause counter
-                    self.tim.cr1.modify(|_, w| w.cen().clear_bit());
-                    self.tim
-                }
-            }
-
-            impl hal_api_custom::timer::CountDown for CountDownTimer<$TIM> {
-                type Time = NanoSecond;
-
-                fn start<T>(&mut self, timeout: T)
-                where
-                    T: Into<NanoSecond>,
-                {
-
-                    // pause
-                    self.tim.cr1.modify(|_, w| w.cen().clear_bit());
-                    // reset counter
-                    self.tim.cnt.reset();
-
-                    let ticks = crate::time::cycles_ns(timeout.into(), self.clk);
-
-                    let psc = u16((ticks - 1) / (1 << 16)).unwrap();
-                    self.tim.psc.write(|w| unsafe {w.psc().bits(psc)} );
-
-                    // TODO: TIM2 and TIM5 are 32 bit
-                    let arr = u32(ticks / u32(psc + 1));
-                    self.tim.arr.write(|w| unsafe { w.bits(u32(arr)) });
-
-                    // Trigger update event to load the registers
-                    self.tim.cr1.modify(|_, w| w.urs().set_bit());
-                    self.tim.egr.write(|w| w.ug().set_bit());
-                    self.tim.cr1.modify(|_, w| w.urs().clear_bit());
-
-                    // start counter
-                    self.tim.cr1.modify(|_, w| w.cen().set_bit());
-                }
-
-                fn wait(&mut self) -> nb::Result<(), Void> {
-                    if self.tim.sr.read().uif().bit_is_clear() {
-                        Err(nb::Error::WouldBlock)
-                    } else {
-                        self.tim.sr.modify(|_, w| w.uif().clear_bit());
-                        Ok(())
-                    }
-                }
-            }
-
-            impl CountDown for CountDownTimer<$TIM> {
-                fn max_period(&self) -> NanoSecond {
-                    // TODO: TIM2 and TIM5 are 32 bit
-                    crate::time::duration_ns(self.clk, u32::MAX as u32)
+                fn cancel(&mut self) -> Result<(), Self::Error> {
+                     self.shared_cancel()
                 }
             }
 
@@ -460,24 +632,16 @@ macro_rules! tim_u32 {
                 type Error = Error;
 
                 fn cancel(&mut self) -> Result<(), Self::Error> {
-                    // let is_counter_enabled = self.tim.cr1.read().cen().is_enabled();
-                    let is_counter_enabled = self.tim.cr1.read().cen().bit_is_set();
-                    if !is_counter_enabled {
-                        return Err(Self::Error::Disabled);
-                    }
-
-                    // disable counter
-                    self.tim.cr1.modify(|_, w| w.cen().clear_bit());
-                    Ok(())
+                     self.shared_cancel()
                 }
             }
         )+
     }
 }
 
-
-tim_u16! {
+hal! {
     crate::stm32::TIM1: (tim1),
+    crate::stm32::TIM2: (tim2),
     crate::stm32::TIM3: (tim3),
     crate::stm32::TIM4: (tim4),
     crate::stm32::TIM6: (tim6),
@@ -487,21 +651,6 @@ tim_u16! {
     crate::stm32::TIM15: (tim15),
     crate::stm32::TIM16: (tim16),
     crate::stm32::TIM17: (tim17),
-}
-
-tim_u32!{
-    crate::stm32::TIM2: (tim2),
-}
-
-#[cfg(any(
-feature = "stm32g471",
-feature = "stm32g473",
-feature = "stm32g474",
-feature = "stm32g483",
-feature = "stm32g484"
-))]
-tim_u32! {
-    crate::stm32::TIM5: (tim5),
 }
 
 hal_ext_trgo! {
@@ -516,7 +665,16 @@ hal_ext_trgo! {
     crate::stm32::TIM15: (tim15, mms),
 }
 
-
+#[cfg(any(
+feature = "stm32g471",
+feature = "stm32g473",
+feature = "stm32g474",
+feature = "stm32g483",
+feature = "stm32g484"
+))]
+hal! {
+    crate::stm32::TIM5: (tim5),
+}
 
 #[cfg(any(
 feature = "stm32g473",
@@ -524,6 +682,6 @@ feature = "stm32g474",
 feature = "stm32g483",
 feature = "stm32g484"
 ))]
-tim_u16! {
+hal! {
     crate::stm32::TIM20: (tim20),
 }

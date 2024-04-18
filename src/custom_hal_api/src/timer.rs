@@ -57,15 +57,8 @@ use void::Void;
 /// #     fn wait(&mut self) -> ::nb::Result<(), Void> { Ok(()) }
 /// # }
 /// ```
-pub trait CountDown {
-    /// The unit of time used by this timer
-    type Time;
-
-    /// Starts a new count down
-    fn start<T>(&mut self, count: T)
-    where
-        T: Into<Self::Time>;
-
+pub trait CountDown
+{
     /// Non-blockingly "waits" until the count down finishes
     ///
     /// # Contract
@@ -77,11 +70,42 @@ pub trait CountDown {
     fn wait(&mut self) -> nb::Result<(), Void>;
 }
 
+pub trait CountDownNs : CountDown
+{
+    /// The unit of time used by this timer
+    type Time;
+
+    /// Starts a new count down
+    fn start<T>(&mut self, count: T) where
+        T: Into<Self::Time>;
+}
+
+pub trait CountDownUs : CountDown
+{
+    /// The unit of time used by this timer
+    type Time;
+
+    /// Starts a new count down
+    fn start<T>(&mut self, count: T) where
+        T: Into<Self::Time>;
+}
+
+pub trait CountDownMs : CountDown
+{
+    /// The unit of time used by this timer
+    type Time;
+
+    /// Starts a new count down
+    fn start<T>(&mut self, count: T) where
+        T: Into<Self::Time>;
+}
+
 /// Marker trait that indicates that a timer is periodic
 pub trait Periodic {}
 
 /// Trait for cancelable countdowns.
-pub trait Cancel: CountDown {
+pub trait Cancel: CountDown
+{
     /// Error returned when a countdown can't be canceled.
     type Error;
 

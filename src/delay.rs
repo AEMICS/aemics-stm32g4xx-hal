@@ -46,7 +46,7 @@ use crate::time::ExtU32;
 use hal_api::delay::DelayNs;
 use hal_api_old::blocking::delay::{DelayUs, DelayMs};
 
-pub trait CountDown_ns: hal_api_custom::timer::CountDown {
+pub trait CountDown_ns: hal_api_custom::timer::CountDownNs {
     fn max_period(&self) -> NanoSecond;
 }
 
@@ -54,11 +54,11 @@ pub trait CountDownCompat: hal_api_old::timer::CountDown {
     fn max_period(&self) -> MicroSecond;
 }
 
-pub trait CountDown_us: hal_api_custom::timer::CountDown {
+pub trait CountDown_us: hal_api_custom::timer::CountDownUs {
     fn max_period(&self) -> MicroSecond;
 }
 
-pub trait CountDown_ms: hal_api_custom::timer::CountDown {
+pub trait CountDown_ms: hal_api_custom::timer::CountDownMs {
     fn max_period(&self) -> MilliSecond;
 }
 
@@ -87,6 +87,7 @@ pub trait DelayExt {
             T: Into<MilliSecond>;
 }
 
+///Extension for Delay functionality from cortex-m crate.
 impl DelayExt for Delay {
 
     fn delay_us<T>(&mut self, delay: T)
@@ -126,13 +127,13 @@ macro_rules! impl_delay_from_count_down_timer  {
             T: CountDown_ns<Time = NanoSecond>,
         {
             fn $delay(&mut self, t: u32) {
-                let mut time_left = t as u64;
+                let mut time_left = t;
 
                 let max_sleep = self.0.max_period();
-                let max_sleep = max_sleep.to_nanos() as u64;
+                let max_sleep = max_sleep.to_nanos();
 
                 if time_left > max_sleep {
-                    self.0.start(max_sleep);
+                    self.0.start(max_sleep.nanos());
 
                     // Process the time one max_sleep duration at a time
                     // to avoid overflowing both u32 and the timer
@@ -142,10 +143,10 @@ macro_rules! impl_delay_from_count_down_timer  {
                     }
                 }
 
-                assert!(time_left <= u32::MAX as u64);
+                assert!(time_left <= u32::MAX);
                 assert!(time_left <= max_sleep);
 
-                let time_left: NanoSecond = (time_left as u32).nanos();
+                let time_left: NanoSecond = (time_left).nanos();
 
                 // Only sleep
                 if time_left.ticks() > 0 {
@@ -162,13 +163,13 @@ macro_rules! impl_delay_from_count_down_timer  {
             T: CountDown_us<Time = MicroSecond>,
         {
             fn $delay(&mut self, t: u32) {
-                let mut time_left = t as u64;
+                let mut time_left = t;
 
                 let max_sleep = self.0.max_period();
-                let max_sleep = max_sleep.to_micros() as u64;
+                let max_sleep = max_sleep.to_micros();
 
                 if time_left > max_sleep {
-                    self.0.start(max_sleep);
+                    self.0.start(max_sleep.micros());
 
                     // Process the time one max_sleep duration at a time
                     // to avoid overflowing both u32 and the timer
@@ -178,10 +179,10 @@ macro_rules! impl_delay_from_count_down_timer  {
                     }
                 }
 
-                assert!(time_left <= u32::MAX as u64);
+                assert!(time_left <= u32::MAX);
                 assert!(time_left <= max_sleep);
 
-                let time_left: MicroSecond = (time_left as u32).micros();
+                let time_left: MicroSecond = (time_left).micros();
 
                 // Only sleep
                 if time_left.ticks() > 0 {
@@ -198,13 +199,13 @@ macro_rules! impl_delay_from_count_down_timer  {
             T: CountDown_ms<Time = MilliSecond>,
         {
             fn $delay(&mut self, t: u32) {
-                let mut time_left = t as u64;
+                let mut time_left = t;
 
                 let max_sleep = self.0.max_period();
-                let max_sleep = max_sleep.to_millis() as u64;
+                let max_sleep = max_sleep.to_millis();
 
                 if time_left > max_sleep {
-                    self.0.start(max_sleep);
+                    self.0.start(max_sleep.millis());
 
                     // Process the time one max_sleep duration at a time
                     // to avoid overflowing both u32 and the timer
@@ -214,10 +215,10 @@ macro_rules! impl_delay_from_count_down_timer  {
                     }
                 }
 
-                assert!(time_left <= u32::MAX as u64);
+                assert!(time_left <= u32::MAX);
                 assert!(time_left <= max_sleep);
 
-                let time_left: MilliSecond = (time_left as u32).millis();
+                let time_left: MilliSecond = (time_left).millis();
 
                 // Only sleep
                 if time_left.ticks() > 0 {
@@ -236,13 +237,13 @@ macro_rules! impl_delay_from_count_down_timer_old  {
             T: CountDown_us<Time = MicroSecond>,
         {
             fn $delay(&mut self, t: u32) {
-                let mut time_left = t as u64;
+                let mut time_left = t;
 
                 let max_sleep = self.0.max_period();
-                let max_sleep = max_sleep.to_micros() as u64;
+                let max_sleep = max_sleep.to_micros();
 
                 if time_left > max_sleep {
-                    self.0.start(max_sleep);
+                    self.0.start(max_sleep.micros());
 
                     // Process the time one max_sleep duration at a time
                     // to avoid overflowing both u32 and the timer
@@ -252,10 +253,10 @@ macro_rules! impl_delay_from_count_down_timer_old  {
                     }
                 }
 
-                assert!(time_left <= u32::MAX as u64);
+                assert!(time_left <= u32::MAX);
                 assert!(time_left <= max_sleep);
 
-                let time_left: MicroSecond = (time_left as u32).micros();
+                let time_left: MicroSecond = (time_left).micros();
 
                 // Only sleep
                 if time_left.ticks() > 0 {
@@ -290,13 +291,13 @@ macro_rules! impl_delay_from_count_down_timer_old  {
             T: CountDown_ms<Time = MilliSecond>,
         {
             fn $delay(&mut self, t: u32) {
-                let mut time_left = t as u64;
+                let mut time_left = t;
 
                 let max_sleep = self.0.max_period();
-                let max_sleep = max_sleep.to_millis() as u64;
+                let max_sleep = max_sleep.to_millis();
 
                 if time_left > max_sleep {
-                    self.0.start(max_sleep);
+                    self.0.start(max_sleep.millis());
 
                     // Process the time one max_sleep duration at a time
                     // to avoid overflowing both u32 and the timer
@@ -306,10 +307,10 @@ macro_rules! impl_delay_from_count_down_timer_old  {
                     }
                 }
 
-                assert!(time_left <= u32::MAX as u64);
+                assert!(time_left <= u32::MAX);
                 assert!(time_left <= max_sleep);
 
-                let time_left: MilliSecond = (time_left as u32).millis();
+                let time_left: MilliSecond = (time_left).millis();
 
                 // Only sleep
                 if time_left.ticks() > 0 {
