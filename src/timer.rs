@@ -28,21 +28,30 @@ pub struct CountDownTimer<TIM> {
     clk: Hertz,
 }
 
-impl<TIM> Timer<TIM>
-    where
-        CountDownTimer<TIM>: CountDownCompat<Time = MicroSecond>,
-{
-    /// Starts timer in count down mode at a given frequency
-    pub fn start_count_down<T>(self, timeout: T) -> CountDownTimer<TIM>
+mod old_api_compat {
+    use crate::timer::*;
+
+    impl<TIM> Timer<TIM>
         where
-            T: Into<MicroSecond>,
+            CountDownTimer<TIM>: CountDownCompat<Time = MicroSecond>,
     {
-        let Self { tim, clk } = self;
-        let mut timer = CountDownTimer { tim, clk };
-        timer.start(timeout);
-        timer
+        /// Starts timer in count down mode at a given frequency
+        /// This is a compatibility function for using embedded-HAL 0.2.7.
+        /// For new projects instead use start_count_down_ms/us/ns.
+        pub fn start_count_down_compat<T>(self, timeout: T) -> CountDownTimer<TIM>
+            where
+                T: Into<MicroSecond>,
+        {
+            let Self { tim, clk } = self;
+            let mut timer = CountDownTimer { tim, clk };
+            timer.start(timeout);
+            timer
+        }
     }
+
+    impl<TIM> hal_api_old::timer::Periodic for CountDownTimer<TIM> {}
 }
+
 
 impl<TIM> Timer<TIM>
     where
@@ -92,7 +101,7 @@ impl<TIM> Timer<TIM>
     }
 }
 
-impl<TIM> hal_api_old::timer::Periodic for CountDownTimer<TIM> {}
+impl<TIM> hal_api_custom::timer::Periodic for CountDownTimer<TIM> {}
 
 /// Interrupt events
 pub enum Event {
