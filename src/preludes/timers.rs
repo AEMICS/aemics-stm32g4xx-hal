@@ -1,4 +1,6 @@
+pub use crate::hal_api_custom::timer::*;
+
 pub use crate::{
-    timer::*,
     time::*,
+    timer::*,
 };

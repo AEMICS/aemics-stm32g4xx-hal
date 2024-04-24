@@ -10,8 +10,9 @@ pub use fugit::{
 #[derive(Debug, Eq, PartialEq, PartialOrd, Clone, Copy)]
 pub struct Bps(pub u32);
 
+//Seems to be defined in src/timer.rs as well, but in a different way. TODO: Find out why and fix. Double definition results in a warning.
 /// A measurement of a monotonically nondecreasing clock
-pub type Instant = fugit::TimerInstantU32<1_000_000>;
+//pub type Instant = fugit::TimerInstantU32<1_000_000>;
 
 /// WeekDay (1-7)
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

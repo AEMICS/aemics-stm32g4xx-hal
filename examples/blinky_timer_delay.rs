@@ -24,7 +24,10 @@ fn main() -> ! {
     let mut led = gpiob.pb7.into_push_pull_output();
 
     let timer2 = Timer::new(dp.TIM2, &rcc.clocks);
-    let mut delay = DelayFromCountDownTimer::new(timer2.start_count_down_ms(100.millis()));
+
+    let mut delay = DelayFromCountDownTimer::new(timer2.create_count_down_ms());
+
+
 
     //Program, toggles the LED on/off at 1Hz.
     loop

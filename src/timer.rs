@@ -57,6 +57,15 @@ impl<TIM> Timer<TIM>
     where
         CountDownTimer<TIM>: CountDown_ns<Time = NanoSecond>,
 {
+    /// Creates a countdown timer with up to NanoSecond accuracy.
+    pub fn create_count_down_ns<T>(self) -> CountDownTimer<TIM>
+        where
+            T: Into<NanoSecond>,
+    {
+        let Self { tim, clk } = self;
+        CountDownTimer { tim, clk }
+    }
+
     /// Starts timer in count down mode at a given frequency
     pub fn start_count_down_ns<T>(self, timeout: T) -> CountDownTimer<TIM>
         where
@@ -73,6 +82,15 @@ impl<TIM> Timer<TIM>
     where
         CountDownTimer<TIM>: CountDown_us<Time = MicroSecond>,
 {
+    /// Creates a countdown timer with up to MicroSecond accuracy.
+    pub fn create_count_down_us<T>(self) -> CountDownTimer<TIM>
+        where
+            T: Into<MicroSecond>,
+    {
+        let Self { tim, clk } = self;
+        CountDownTimer { tim, clk }
+    }
+
     /// Starts timer in count down mode at a given frequency
     pub fn start_count_down_us<T>(self, timeout: T) -> CountDownTimer<TIM>
         where
@@ -89,6 +107,15 @@ impl<TIM> Timer<TIM>
     where
         CountDownTimer<TIM>: CountDown_ms<Time = MilliSecond>,
 {
+    /// Creates a countdown timer with up to MilliSecond accuracy.
+    pub fn create_count_down_ms<T>(self) -> CountDownTimer<TIM>
+        where
+            T: Into<MilliSecond>,
+    {
+        let Self { tim, clk } = self;
+        CountDownTimer { tim, clk }
+    }
+
     /// Starts timer in count down mode at a given frequency
     pub fn start_count_down_ms<T>(self, timeout: T) -> CountDownTimer<TIM>
         where
