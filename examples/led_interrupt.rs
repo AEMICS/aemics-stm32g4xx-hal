@@ -1,23 +1,14 @@
 #![no_main]
 #![no_std]
 
-use panic_semihosting as _;
-use aemics_stm32g4xx_hal as aemics_hal;
 
-//Hier importeren we de benodigde functies uit de HAL die we nodig hebben
-use aemics_hal::{
-    gpio::GpioExt,
-    prelude::*,
-    rcc::{Config, RccExt},
-    stm32::{self, interrupt, Interrupt},
-    timer::{CountDownTimer, Event, Timer},
-    time::*,
+use aemics_stm32g4xx_hal::preludes::{
+    default::*,
+    digital::*,
+    interrupts::*,
+    timers::*,
 };
 
-use core::cell::RefCell;
-use core::ops::DerefMut;
-use cortex_m::{asm::wfi, interrupt::Mutex};
-use cortex_m_rt::entry;
 use aemics_stm32g4xx_hal::pwr::PwrExt;
 
 //We gebruiken hier een Mutex voor de Timer. dit zorgt er voor dat maar 1 proces tegelijkertijd de waarde kan veranderen.
