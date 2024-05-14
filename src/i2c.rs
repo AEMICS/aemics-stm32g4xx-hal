@@ -1,23 +1,24 @@
 //! I2C
-use hal_api_old::blocking::i2c::{Read, Write, WriteRead};
+
+use hal_api::i2c::{SevenBitAddress, TenBitAddress, I2c, Operation, ErrorType, ErrorKind, NoAcknowledgeSource};
 
 use crate::gpio::{gpioa::*, gpiob::*, gpioc::*, gpiof::*};
 #[cfg(any(
-    feature = "stm32g471",
-    feature = "stm32g473",
-    feature = "stm32g474",
-    feature = "stm32g483",
-    feature = "stm32g484"
+feature = "stm32g471",
+feature = "stm32g473",
+feature = "stm32g474",
+feature = "stm32g483",
+feature = "stm32g484"
 ))]
 use crate::gpio::{gpiog::*, AF3};
 use crate::gpio::{AlternateOD, AF2, AF4, AF8};
 use crate::rcc::{Enable, GetBusFreq, Rcc, RccBus, Reset};
 #[cfg(any(
-    feature = "stm32g471",
-    feature = "stm32g473",
-    feature = "stm32g474",
-    feature = "stm32g483",
-    feature = "stm32g484"
+feature = "stm32g471",
+feature = "stm32g473",
+feature = "stm32g474",
+feature = "stm32g483",
+feature = "stm32g484"
 ))]
 use crate::stm32::I2C4;
 use crate::stm32::{I2C1, I2C2, I2C3, RCC};
@@ -35,8 +36,8 @@ pub struct Config {
 impl Config {
     /// Creates a default configuration for the given bus frequency.
     pub fn new<T>(speed: T) -> Self
-    where
-        T: Into<Hertz>,
+        where
+            T: Into<Hertz>,
     {
         Config {
             speed: Some(speed.into()),
@@ -103,7 +104,7 @@ impl Config {
 }
 
 /// I2C abstraction
-pub struct I2c<I2C, SDA, SCL> {
+pub struct I2cObj<I2C, SDA, SCL> {
     i2c: I2C,
     sda: SDA,
     scl: SCL,
@@ -115,21 +116,11 @@ pub trait SDAPin<I2C> {}
 /// I2C SCL pin
 pub trait SCLPin<I2C> {}
 
-/// I2C error
-#[derive(Debug)]
-pub enum Error {
-    Overrun,
-    Nack,
-    PECError,
-    BusError,
-    ArbitrationLost,
-}
-
 pub trait I2cExt<I2C> {
-    fn i2c<SDA, SCL>(self, sda: SDA, scl: SCL, config: Config, rcc: &mut Rcc) -> I2c<I2C, SDA, SCL>
-    where
-        SDA: SDAPin<I2C>,
-        SCL: SCLPin<I2C>;
+    fn i2c<SDA, SCL>(self, sda: SDA, scl: SCL, config: Config, rcc: &mut Rcc) -> I2cObj<I2C, SDA, SCL>
+        where
+            SDA: SDAPin<I2C>,
+            SCL: SCLPin<I2C>;
 }
 
 /// Sequence to flush the TXDR register. This resets the TXIS and TXE flags
@@ -156,14 +147,14 @@ macro_rules! busy_wait {
                 break;
             } else if isr.berr().bit_is_set() {
                 $i2c.icr.write(|w| w.berrcf().set_bit());
-                return Err(Error::BusError);
+                return Err(ErrorKind::Bus);
             } else if isr.arlo().bit_is_set() {
                 $i2c.icr.write(|w| w.arlocf().set_bit());
-                return Err(Error::ArbitrationLost);
+                return Err(ErrorKind::ArbitrationLoss);
             } else if isr.nackf().bit_is_set() {
                 $i2c.icr.write(|w| w.stopcf().set_bit().nackcf().set_bit());
                 flush_txdr!($i2c);
-                return Err(Error::Nack);
+                return Err(ErrorKind::NoAcknowledge(NoAcknowledgeSource::Unknown)); //TODO: Split into both reasons.
             } else {
                 // try again
             }
@@ -193,16 +184,16 @@ macro_rules! i2c {
                 scl: SCL,
                 config: Config,
                 rcc: &mut Rcc,
-            ) -> I2c<$I2CX, SDA, SCL>
+            ) -> I2cObj<$I2CX, SDA, SCL>
             where
                 SDA: SDAPin<$I2CX>,
                 SCL: SCLPin<$I2CX>,
             {
-                I2c::$i2cx(self, sda, scl, config, rcc)
+                I2cObj::$i2cx(self, sda, scl, config, rcc)
             }
         }
 
-        impl<SDA, SCL> I2c<$I2CX, SDA, SCL> where
+        impl<SDA, SCL> I2cObj<$I2CX, SDA, SCL> where
             SDA: SDAPin<$I2CX>,
             SCL: SCLPin<$I2CX>
         {
@@ -236,7 +227,7 @@ macro_rules! i2c {
                         .bit(!config.analog_filter)
                 });
 
-                I2c { i2c, sda, scl }
+                I2cObj { i2c, sda, scl }
             }
 
             /// Disables I2C and releases the peripheral as well as the pins.
@@ -252,159 +243,231 @@ macro_rules! i2c {
             }
         }
 
-        impl<SDA, SCL> WriteRead for I2c<$I2CX, SDA, SCL> {
-            type Error = Error;
-
-            fn write_read(
+        impl<SDA, SCL> I2c<SevenBitAddress> for I2cObj<$I2CX, SDA, SCL>
+        {
+            fn transaction(
                 &mut self,
-                addr: u8,
-                bytes: &[u8],
-                buffer: &mut [u8],
-            ) -> Result<(), Self::Error> {
-                // TODO support transfers of more than 255 bytes
-                assert!(bytes.len() < 256 && bytes.len() > 0);
-                assert!(buffer.len() < 256 && buffer.len() > 0);
-
+                address: SevenBitAddress,
+                operations: &mut [Operation<'_>],
+            ) -> Result<(), Self::Error>
+            {
                 // Wait for any previous address sequence to end automatically.
                 // This could be up to 50% of a bus cycle (ie. up to 0.5/freq)
                 while self.i2c.cr2.read().start().bit_is_set() {};
 
-                // Set START and prepare to send `bytes`.
-                // The START bit can be set even if the bus is BUSY or
-                // I2C is in slave mode.
-                self.i2c.cr2.write(|w| {
-                    w
-                        // Start transfer
-                        .start().set_bit()
-                        // Set number of bytes to transfer
-                        .nbytes().bits(bytes.len() as u8)
-                        // Set address to transfer to/from
-                        .sadd().bits((addr << 1) as u16)
-                        // 7-bit addressing mode
-                        .add10().clear_bit()
-                        // Set transfer direction to write
-                        .rd_wrn().clear_bit()
-                        // Software end mode
-                        .autoend().clear_bit()
-                });
+                let mut previous_op: u8 = 2; //Make sure that whatever the first operation is, its type does not match this value. This ensures we send a new ST condition and the correct SAD+R/W.
 
-                for byte in bytes {
-                    // Wait until we are allowed to send data
-                    // (START has been ACKed or last byte went through)
-                    busy_wait!(self.i2c, txis, bit_is_set);
+                for i in 0..operations.len() {
+                    let operation = &mut operations[i];
 
-                    // Put byte on the wire
-                    self.i2c.txdr.write(|w| { w.txdata().bits(*byte) });
+                    let current_op: u8 = match operation {
+                        Operation::Read(_) => 1,
+                        Operation::Write(_) => 0,
+                    };
+
+                    //TODO: Resend start condition SR and send new SAD+R/W
+                    if(current_op != previous_op) {
+                        if(current_op == 1) //Reading
+                        {
+                            self.i2c.cr2.modify(|_, w| {
+                                w
+                                    // Start transfer
+                                    .start().set_bit()
+                                    // Set address to transfer to/from
+                                    .sadd().bits((address << 1) as u16)
+                                    // Set transfer direction to read
+                                    .rd_wrn().set_bit()
+                                    // Software end mode
+                                    .autoend().clear_bit()
+                            });
+                        }
+                        else //Writing
+                        {
+                            self.i2c.cr2.modify(|_, w| {
+                                w
+                                    // Start transfer
+                                    .start().set_bit()
+                                    // Set address to transfer to/from
+                                    .sadd().bits((address << 1) as u16)
+                                    // Set transfer direction to write
+                                    .rd_wrn().clear_bit()
+                                    // Software end mode
+                                    .autoend().clear_bit()
+                            });
+                        }
+
+                        previous_op = current_op;
+                    }
+
+                    match operation {
+                        Operation::Read(ref mut data) => {
+                            // TODO support transfers of more than 255 bytes
+                            assert!(data.len() < 256 && data.len() > 0); //For now only transfers of max 255 bytes are supported.
+
+                            self.i2c.cr2.modify(|_, w| {
+                                w
+                                    // Set number of bytes to transfer
+                                    .nbytes().bits(data.len() as u8)
+                            });
+
+                            for byte in data.iter_mut() {
+                                // Wait until we have received something
+                                busy_wait!(self.i2c, rxne, bit_is_set);
+
+                                *byte = self.i2c.rxdr.read().rxdata().bits();
+                            }
+                        }
+                        Operation::Write(data) => {
+                            assert!(data.len() < 256 && data.len() > 0);
+
+                            //TODO: Write each byte in data
+
+                            self.i2c.cr2.modify(|_, w| {
+                                w
+                                    // Set number of bytes to transfer
+                                    .nbytes().bits(data.len() as u8)
+                            });
+
+                            for byte in data.iter() {
+                                // Wait until we are allowed to send data
+                                // (START has been ACKed or last byte when through)
+                                busy_wait!(self.i2c, txis, bit_is_set);
+
+                                // Put byte on the wire
+                                self.i2c.txdr.write(|w| w.txdata().bits(*byte) );
+                            }
+                        }
+                    }
+
                 }
 
-                // Wait until the write finishes before beginning to read.
-                busy_wait!(self.i2c, tc, bit_is_set);
-
-                // reSTART and prepare to receive bytes into `buffer`
-                self.i2c.cr2.write(|w| {
-                    w
-                        // Start transfer
-                        .start().set_bit()
-                        // Set number of bytes to transfer
-                        .nbytes().bits(buffer.len() as u8)
-                        // Set address to transfer to/from
-                        .sadd().bits((addr << 1) as u16)
-                        // 7-bit addressing mode
-                        .add10().clear_bit()
-                        // Set transfer direction to read
-                        .rd_wrn().set_bit()
-                        // Automatic end mode
-                        .autoend().set_bit()
-                });
-
-                for byte in buffer {
-                    // Wait until we have received something
-                    busy_wait!(self.i2c, rxne, bit_is_set);
-
-                    *byte = self.i2c.rxdr.read().rxdata().bits();
-                }
-
-                // automatic STOP
-
-                Ok(())
-            }
-        }
-
-        impl<SDA, SCL> Write for I2c<$I2CX, SDA, SCL> {
-            type Error = Error;
-
-            fn write(&mut self, addr: u8, bytes: &[u8]) -> Result<(), Self::Error> {
-                assert!(bytes.len() < 256 && bytes.len() > 0);
-
+                 //Send SP condition
                 self.i2c.cr2.modify(|_, w| {
                     w
                         // Start transfer
-                        .start().set_bit()
-                        // Set number of bytes to transfer
-                        .nbytes().bits(bytes.len() as u8)
-                        // Set address to transfer to/from
-                        .sadd().bits((addr << 1) as u16)
-                        // Set transfer direction to write
-                        .rd_wrn().clear_bit()
-                        // Automatic end mode
-                        .autoend().set_bit()
+                        .stop().set_bit()
                 });
-
-                for byte in bytes {
-                    // Wait until we are allowed to send data
-                    // (START has been ACKed or last byte when through)
-                    busy_wait!(self.i2c, txis, bit_is_set);
-
-                    // Put byte on the wire
-                    self.i2c.txdr.write(|w| w.txdata().bits(*byte) );
-                }
-
-                // automatic STOP
 
                 Ok(())
             }
         }
 
-        impl<SDA, SCL> Read for I2c<$I2CX, SDA, SCL> {
-            type Error = Error;
-
-            fn read(&mut self, addr: u8, bytes: &mut [u8]) -> Result<(), Self::Error> {
-                // TODO support transfers of more than 255 bytes
-                assert!(bytes.len() < 256 && bytes.len() > 0);
-
+        impl<SDA, SCL> I2c<TenBitAddress> for I2cObj<$I2CX, SDA, SCL>
+        {
+            fn transaction(
+                &mut self,
+                address: TenBitAddress,
+                operations: &mut [Operation<'_>],
+            ) -> Result<(), Self::Error>
+            {
                 // Wait for any previous address sequence to end automatically.
                 // This could be up to 50% of a bus cycle (ie. up to 0.5/freq)
                 while self.i2c.cr2.read().start().bit_is_set() {};
 
-                // Set START and prepare to receive bytes into `buffer`.
-                // The START bit can be set even if the bus
-                // is BUSY or I2C is in slave mode.
+                let mut previous_op: u8 = 2; //Make sure that whatever the first operation is, its type does not match this value. This ensures we send a new ST condition and the correct SAD+R/W.
+
+                for i in 0..operations.len() {
+                    let operation = &mut operations[i];
+
+                    let current_op: u8 = match operation {
+                        Operation::Read(_) => 1,
+                        Operation::Write(_) => 0,
+                    };
+
+                    //TODO: Resend start condition SR and send new SAD+R/W
+                    if(current_op != previous_op) {
+                        if(current_op == 1) //Reading
+                        {
+                            self.i2c.cr2.modify(|_, w| {
+                                w
+                                    // Start transfer
+                                    .start().set_bit()
+                                    // Set address to transfer to/from
+                                    .sadd().bits((address << 1) as u16)
+                                    // Set transfer direction to read
+                                    .rd_wrn().set_bit()
+                                    // Set address mode to 10 bit.
+                                    .add10().set_bit()
+                                    // Software end mode
+                                    .autoend().clear_bit()
+                            });
+                        }
+                        else //Writing
+                        {
+                            self.i2c.cr2.modify(|_, w| {
+                                w
+                                    // Start transfer
+                                    .start().set_bit()
+                                    // Set address to transfer to/from
+                                    .sadd().bits((address << 1) as u16)
+                                    // Set transfer direction to write
+                                    .rd_wrn().clear_bit()
+                                    // Set address mode to 10 bit.
+                                    .add10().set_bit()
+                                    // Software end mode
+                                    .autoend().clear_bit()
+                            });
+                        }
+
+                        previous_op = current_op;
+                    }
+
+                    match operation {
+                        Operation::Read(ref mut data) => {
+                            // TODO support transfers of more than 255 bytes
+                            assert!(data.len() < 256 && data.len() > 0); //For now only transfers of max 255 bytes are supported.
+
+                            self.i2c.cr2.modify(|_, w| {
+                                w
+                                    // Set number of bytes to transfer
+                                    .nbytes().bits(data.len() as u8)
+                            });
+
+                            for byte in data.iter_mut() {
+                                // Wait until we have received something
+                                busy_wait!(self.i2c, rxne, bit_is_set);
+
+                                *byte = self.i2c.rxdr.read().rxdata().bits();
+                            }
+                        }
+                        Operation::Write(data) => {
+                            assert!(data.len() < 256 && data.len() > 0);
+
+                            //TODO: Write each byte in data
+
+                            self.i2c.cr2.modify(|_, w| {
+                                w
+                                    // Set number of bytes to transfer
+                                    .nbytes().bits(data.len() as u8)
+                            });
+
+                            for byte in data.iter() {
+                                // Wait until we are allowed to send data
+                                // (START has been ACKed or last byte when through)
+                                busy_wait!(self.i2c, txis, bit_is_set);
+
+                                // Put byte on the wire
+                                self.i2c.txdr.write(|w| w.txdata().bits(*byte) );
+                            }
+                        }
+                    }
+
+                }
+
+                 //Send SP condition
                 self.i2c.cr2.modify(|_, w| {
                     w
                         // Start transfer
-                        .start().set_bit()
-                        // Set number of bytes to transfer
-                        .nbytes().bits(bytes.len() as u8)
-                        // Set address to transfer to/from
-                        .sadd().bits((addr << 1) as u16)
-                        // Set transfer direction to read
-                        .rd_wrn().set_bit()
-                        // automatic end mode
-                        .autoend().set_bit()
+                        .stop().set_bit()
                 });
-
-                for byte in bytes {
-                    // Wait until we have received something
-                    busy_wait!(self.i2c, rxne, bit_is_set);
-
-                    *byte = self.i2c.rxdr.read().rxdata().bits();
-                }
-
-                // automatic STOP
 
                 Ok(())
             }
         }
+
+        impl<SDA, SCL> ErrorType for I2cObj<$I2CX, SDA, SCL> {
+                type Error = ErrorKind;
+            }
     };
 }
 
@@ -491,11 +554,11 @@ i2c!(
 );
 
 #[cfg(any(
-    feature = "stm32g471",
-    feature = "stm32g473",
-    feature = "stm32g474",
-    feature = "stm32g483",
-    feature = "stm32g484"
+feature = "stm32g471",
+feature = "stm32g473",
+feature = "stm32g474",
+feature = "stm32g483",
+feature = "stm32g484"
 ))]
 i2c!(
     I2C4,
