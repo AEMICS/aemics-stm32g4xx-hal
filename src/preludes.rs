@@ -3,7 +3,7 @@
 pub mod default;
 pub mod delay;
 pub mod digital;
-
 pub mod i2c;
 pub mod interrupts;
 pub mod timers;
+pub mod gpio;
