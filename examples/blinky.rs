@@ -8,6 +8,8 @@ use aemics_stm32g4xx_hal::preludes::{
     delay::*,
 };
 
+use panic_semihosting as _; //Panic Handler
+
 #[entry]
 fn main() -> ! {
     //Load device and core peripherals.

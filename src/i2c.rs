@@ -251,7 +251,7 @@ macro_rules! i2c {
                 operations: &mut [Operation<'_>],
             ) -> Result<(), Self::Error>
             {
-                for mut operation in operations {
+                for operation in operations {
 
                     match operation {
                         Operation::Read(ref mut data) => {
@@ -321,57 +321,7 @@ macro_rules! i2c {
                 operations: &mut [Operation<'_>],
             ) -> Result<(), Self::Error>
             {
-                let mut previous_op: u8 = 2; //Make sure that whatever the first operation is, its type does not match this value. This ensures we send a new ST condition and the correct SAD+R/W.
-
-                for i in 0..operations.len() {
-                    let operation = &mut operations[i];
-
-                    let current_op: u8 = match operation {
-                        Operation::Read(_) => 1,
-                        Operation::Write(_) => 0,
-                    };
-
-                    //TODO: Resend start condition SR and send new SAD+R/W
-                    if(current_op != previous_op) {
-                        if(current_op == 1) //Reading
-                        {
-                            // Wait for any previous address sequence to end automatically.
-                            // This could be up to 50% of a bus cycle (ie. up to 0.5/freq)
-                            while self.i2c.cr2.read().start().bit_is_set() {};
-
-                            self.i2c.cr2.modify(|_, w| {
-                                w
-                                    // Start transfer
-                                    .start().set_bit()
-                                    // Set address to transfer to/from
-                                    .sadd().bits((address << 1) as u16)
-                                    // Set transfer direction to read
-                                    .rd_wrn().set_bit()
-                                    // Set address mode to 10 bit.
-                                    .add10().set_bit()
-                                    // Software end mode
-                                    .autoend().clear_bit()
-                            });
-                        }
-                        else //Writing
-                        {
-                            self.i2c.cr2.modify(|_, w| {
-                                w
-                                    // Start transfer
-                                    .start().set_bit()
-                                    // Set address to transfer to/from
-                                    .sadd().bits((address << 1) as u16)
-                                    // Set transfer direction to write
-                                    .rd_wrn().clear_bit()
-                                    // Set address mode to 10 bit.
-                                    .add10().set_bit()
-                                    // Software end mode
-                                    .autoend().clear_bit()
-                            });
-                        }
-
-                        previous_op = current_op;
-                    }
+                for operation in operations {
 
                     match operation {
                         Operation::Read(ref mut data) => {
@@ -380,8 +330,18 @@ macro_rules! i2c {
 
                             self.i2c.cr2.modify(|_, w| {
                                 w
+                                    // Start transfer
+                                    .start().set_bit()
                                     // Set number of bytes to transfer
                                     .nbytes().bits(data.len() as u8)
+                                    // Set address to transfer to/from
+                                    .sadd().bits((address << 1) as u16)
+                                    // Set transfer direction to read
+                                    .rd_wrn().set_bit()
+                                    //Enable 10-bit addressing
+                                    .add10().set_bit()
+                                    // automatic end mode
+                                    .autoend().set_bit()
                             });
 
                             for byte in data.iter_mut() {
@@ -394,14 +354,23 @@ macro_rules! i2c {
                         Operation::Write(data) => {
                             assert!(data.len() < 256 && data.len() > 0);
 
-                            //TODO: Write each byte in data
-
                             self.i2c.cr2.modify(|_, w| {
                                 w
+                                    // Start transfer
+                                    .start().set_bit()
+                                    // Set address to transfer to/from
+                                    .sadd().bits((address << 1) as u16)
+                                    // Set transfer direction to write
+                                    .rd_wrn().clear_bit()
+                                    // Software end mode
+                                    .autoend().set_bit()
+                                    //Enable 10-bit addressing
+                                    .add10().set_bit()
                                     // Set number of bytes to transfer
                                     .nbytes().bits(data.len() as u8)
                             });
 
+                            //Write each byte in data
                             for byte in data.iter() {
                                 // Wait until we are allowed to send data
                                 // (START has been ACKed or last byte when through)
@@ -412,15 +381,7 @@ macro_rules! i2c {
                             }
                         }
                     }
-
                 }
-
-                 //Send SP condition
-                self.i2c.cr2.modify(|_, w| {
-                    w
-                        // Start transfer
-                        .stop().set_bit()
-                });
 
                 Ok(())
             }

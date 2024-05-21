@@ -37,7 +37,6 @@ pub extern crate stm32g4;
 
 //Explicitly add these external crates to the HAL crate so projects implementing this HAL can use these two crates.
 pub extern crate cortex_m_rt;
-pub extern crate panic_semihosting;
 
 pub use nb::block;
 
@@ -97,7 +96,7 @@ pub mod rcc;
 // pub mod rng;
 pub mod serial;
 pub mod signature;
-pub mod spi;
+pub mod spi_config;
 // pub mod stopwatch;
 pub mod syscfg;
 pub mod time;
@@ -106,3 +105,4 @@ pub mod timer;
 pub mod independent_watchdog;
 pub mod i2c;
 pub mod preludes;
+mod spi;

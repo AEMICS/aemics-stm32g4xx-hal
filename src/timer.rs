@@ -58,9 +58,7 @@ impl<TIM> Timer<TIM>
         CountDownTimer<TIM>: CountDown_ns<Time = NanoSecond>,
 {
     /// Creates a countdown timer with up to NanoSecond accuracy.
-    pub fn create_count_down_ns<T>(self) -> CountDownTimer<TIM>
-        where
-            T: Into<NanoSecond>,
+    pub fn create_count_down_ns(self) -> CountDownTimer<TIM>
     {
         let Self { tim, clk } = self;
         CountDownTimer { tim, clk }
@@ -83,9 +81,7 @@ impl<TIM> Timer<TIM>
         CountDownTimer<TIM>: CountDown_us<Time = MicroSecond>,
 {
     /// Creates a countdown timer with up to MicroSecond accuracy.
-    pub fn create_count_down_us<T>(self) -> CountDownTimer<TIM>
-        where
-            T: Into<MicroSecond>,
+    pub fn create_count_down_us(self) -> CountDownTimer<TIM>
     {
         let Self { tim, clk } = self;
         CountDownTimer { tim, clk }
@@ -108,9 +104,7 @@ impl<TIM> Timer<TIM>
         CountDownTimer<TIM>: CountDown_ms<Time = MilliSecond>,
 {
     /// Creates a countdown timer with up to MilliSecond accuracy.
-    pub fn create_count_down_ms<T>(self) -> CountDownTimer<TIM>
-        where
-            T: Into<MilliSecond>,
+    pub fn create_count_down_ms(self) -> CountDownTimer<TIM>
     {
         let Self { tim, clk } = self;
         CountDownTimer { tim, clk }

@@ -9,6 +9,8 @@ use aemics_stm32g4xx_hal::preludes::{
     timers::*,
 };
 
+use panic_semihosting as _; //Panic Handler
+
 #[entry]
 fn main() -> ! {
     //Load device peripherals.
@@ -34,10 +36,10 @@ fn main() -> ! {
     {
         led.set_high().unwrap();
 
-        delay.delay_ms(100);
+        delay.delay_ms(500);
 
         led.set_low().unwrap();
 
-        delay.delay_ms(100);
+        delay.delay_ms(500);
     }
 }

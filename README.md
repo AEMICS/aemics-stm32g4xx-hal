@@ -8,13 +8,6 @@ This HAL uses the [stm32g4 device support crate](https://docs.rs/crate/stm32g4/0
 Currently, none of the STM32G4 devices are supported. This project aims to support at least the following:
 * stm32g473
 
-The project will also try to support these devices:
-* stm32g431
-* stm32g441
-* stm32g491
-* stm32g483
-* stm32g474
-* stm32g484
 
 TODO (Readme): 
 * Setup process

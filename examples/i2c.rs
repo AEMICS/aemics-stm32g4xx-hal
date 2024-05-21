@@ -24,8 +24,13 @@ use aemics_hal::preludes::i2c::*;
 use aemics_hal::preludes::delay::*;
 use log::info;
 
+#[macro_use]
+mod utils; //Adds internal logging for STM-Link and a panic handler.
+
 #[entry]
 fn main() -> ! {
+
+    utils::logger::init();
 
     let dp = stm32::Peripherals::take().expect("cannot take peripherals");
     let cp = cortex_m::Peripherals::take().unwrap();
@@ -45,23 +50,25 @@ fn main() -> ! {
 
     let mut delay = cp.SYST.delay(&rcc.clocks);
 
-    let write_buf: [u8; 4] = [0, 0, 0, 0];
-    let mut read_buf: [u8; 10] = [0; 10];
+    //Structure: [word address] - [data] - [word address] - [data]
+    let write_buf: [u8; 4] = [0, 255, 1, 255];
+    let mut read_buf: [u8; 2] = [0; 2];
+
+    match i2c.write(0b1010000_u8, &write_buf) {
+        Ok(_) => info!("Ok"),
+        Err(err) => info!("error: {:?}", err)
+    }
+
+    delay.delay_ms(5); //Delay 5 milliseconds to allow the EEPROM chip to do its page write internal write process.
+
+    match i2c.read(0b1010000_u8, &mut read_buf) {
+        Ok(_) => info!("Ok"),
+        Err(err) => {
+            info!("error: {:?}", err);
+        },
+    }
+
     loop {
-        match i2c.write(0b1010000_u8, &write_buf) {
-            Ok(_) => info!("Ok"),
-            Err(err) => {
-                info!("error: {:?}", err);
-            },
-        }
 
-        delay.delay_ms(5); //Delay 5 milliseconds to allow the EEPROM chip to do its page write internal write process.
-
-        match i2c.read(0b1010000_u8, &mut read_buf) {
-            Ok(_) => info!("Ok"),
-            Err(err) => {
-                info!("error: {:?}", err);
-            },
-        }
     }
 }
