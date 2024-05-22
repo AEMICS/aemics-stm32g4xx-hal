@@ -1,4 +1,6 @@
 //! I2C
+//!
+//! File containing the implementations of the embedded-hal [`I2C API`](hal_api::i2c)
 
 use hal_api::i2c::{SevenBitAddress, TenBitAddress, I2c, Operation, ErrorType, ErrorKind, NoAcknowledgeSource};
 
