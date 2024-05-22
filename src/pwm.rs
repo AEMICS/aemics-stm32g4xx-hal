@@ -13,7 +13,7 @@
 //! let pins = (
 //!     gpioa.pa8.into_alternate_af1(),
 //!     gpioa.pa9.into_alternate_af1(),
-//!     gpioa.pa10.into_alternate_af1(),
+//!     gpioa.pa10.into_alternate_af1(), //%!
 //!     gpioa.pa11.into_alternate_af1(),
 //! );
 //! ```
@@ -35,7 +35,7 @@
 //!   );
 //!
 //!   // Set the duty cycle of channel 0 to 50%
-//!   c0.set_duty(c0.get_max_duty() / 2);
+//!   c0.set_duty(c0.get_max_duty() / 2); //%!
 //!   // PWM outputs are disabled by default
 //!   c0.enable()
 //! ```
@@ -53,7 +53,7 @@
 //!     gpioa.pa8.into_alternate_af1(),
 //!     gpioa.pa9.into_alternate_af1(),
 //!     gpioa.pa10.into_alternate_af1(),
-//!     gpioa.pa11.into_alternate_af1(),
+//!     gpioa.pa11.into_alternate_af1(), //%!
 //! );
 //! ```
 //!
@@ -88,7 +88,7 @@
 //!       .into_comp_active_low();
 //!
 //!   // Set the duty cycle of channel 1 to 50%
-//!   c1.set_duty(c1.get_max_duty() / 2);
+//!   c1.set_duty(c1.get_max_duty() / 2); //%!
 //!
 //!   // PWM outputs are disabled by default
 //!   c1.enable()
@@ -172,7 +172,6 @@
 use core::marker::PhantomData;
 use core::mem::MaybeUninit;
 
-use crate::hal_api_old;
 use crate::stm32::LPTIMER1;
 use crate::stm32::RCC;
 #[cfg(any(
@@ -1129,7 +1128,7 @@ pub trait PwmAdvExt<WIDTH>: Sized {
 }
 
 // Implement PwmExt trait for timer
-macro_rules! pwm_ext_hal_old {
+macro_rules! tim_pwm_ext {
     ($TIMX:ident: $timX:ident) => {
         impl PwmExt for $TIMX {
             fn pwm<PINS, T, U, V>(self, pins: PINS, frequency: T, rcc: &mut Rcc) -> PINS::Channel
@@ -1144,11 +1143,11 @@ macro_rules! pwm_ext_hal_old {
 }
 
 // Implement PWM configuration for timer
-macro_rules! tim_hal_old {
+macro_rules! tim_pwm {
     ($($TIMX:ident: ($timX:ident,
                      $typ:ty, $bits:expr $(, DIR: $cms:ident)* $(, BDTR: $bdtr:ident, $moe_set:ident, $af1:ident, $bkinp_setting:ident $(, $bk2inp_setting:ident)*)*),)+) => {
         $(
-            pwm_ext_hal_old!($TIMX: $timX);
+            tim_pwm_ext!($TIMX: $timX);
 
             /// Configures PWM
             fn $timX<PINS, T, U>(
@@ -1242,7 +1241,7 @@ macro_rules! tim_hal_old {
                                 16 => calculate_frequency_16bit(self.base_freq, freq, self.alignment),
                                 _ => calculate_frequency_32bit(self.base_freq, freq, self.alignment),
                             }
-                        },
+                        }
                     };
 
                     // Write prescaler
@@ -1313,8 +1312,8 @@ macro_rules! tim_hal_old {
 
                     $(
                         match self.alignment {
-                            Alignment::Left => { },
-                            Alignment::Right => { tim.cr1.modify(|_, w| w.dir().set_bit()); }, // Downcounter
+                            Alignment::Left => { }
+                            Alignment::Right => { tim.cr1.modify(|_, w| w.dir().set_bit()); } // Downcounter
                             Alignment::Center => { tim.cr1.modify(|_, w| unsafe { w.$cms().bits(3) }); } // Center-aligned mode 3
                         }
                     )*
@@ -1447,7 +1446,7 @@ macro_rules! tim_hal_old {
     }
 }
 
-tim_hal_old! {
+tim_pwm! {
     TIM1: (tim1, u16, 16, DIR: cms, BDTR: bdtr, set_bit, af1, clear_bit, clear_bit),
     TIM2: (tim2, u32, 32, DIR: cms),
     TIM3: (tim3, u16, 16, DIR: cms),
@@ -1460,10 +1459,10 @@ tim_hal_old! {
     feature = "stm32g483",
     feature = "stm32g484"
 ))]
-tim_hal_old! {
+tim_pwm! {
     TIM5: (tim5, u32, 32, DIR: cms),
 }
-tim_hal_old! {
+tim_pwm! {
     TIM8: (tim8, u16, 16, DIR: cms, BDTR: bdtr, set_bit, af1, clear_bit, clear_bit),
     TIM15: (tim15, u16, 16, BDTR: bdtr, set_bit, af1, set_bit),
     TIM16: (tim16, u16, 16, BDTR: bdtr, set_bit, af1, set_bit),
@@ -1478,7 +1477,7 @@ tim_hal_old! {
     feature = "stm32g491",
     feature = "stm32g4a1"
 ))]
-tim_hal_old! {
+tim_pwm! {
     TIM20: (tim20, u16, 16, BDTR: bdtr, set_bit, af1, set_bit),
 }
 
@@ -1487,8 +1486,14 @@ pub trait PwmPinEnable {
     fn ccer_disable(&mut self);
 }
 
+pub trait CustomEnable {
+    fn disable(&mut self);
+
+    fn enable(&mut self);
+}
+
 // Implement PwmPin for timer channels
-macro_rules! tim_pin_hal_old {
+macro_rules! tim_pin_pwm {
     // Standard pins (no complementary functionality)
     ($($TIMX:ident:
        ($CH:ty, $ccxe:ident, $ccxp:ident, $ccmrx_output:ident, $ocxpe:ident, $ocxm:ident,
@@ -1551,6 +1556,63 @@ macro_rules! tim_pin_hal_old {
 
                     tim.$ccrx().write(|w| unsafe { w.ccr().bits(duty.into()) });
                 }
+            }
+
+            impl<COMP, POL, NPOL> CustomEnable for Pwm<$TIMX, $CH, COMP, POL, NPOL>
+                where Pwm<$TIMX, $CH, COMP, POL, NPOL>: PwmPinEnable {
+
+                fn disable(&mut self) {
+                    self.ccer_disable();
+                }
+
+                fn enable(&mut self) {
+                    let tim = unsafe { &*$TIMX::ptr() };
+
+                    tim.$ccmrx_output().modify(|_, w|
+                        w.$ocxpe()
+                            .set_bit() // Enable preload
+                            .$ocxm()
+                            .pwm_mode1() // PWM Mode
+                    );
+
+                    self.ccer_enable();
+                }
+            }
+
+
+            impl<COMP, POL, NPOL> hal_api::pwm::SetDutyCycle for Pwm<$TIMX, $CH, COMP, POL, NPOL>
+                where Pwm<$TIMX, $CH, COMP, POL, NPOL>: PwmPinEnable {
+
+                fn max_duty_cycle(&self) -> u16 {
+                    let tim = unsafe { &*$TIMX::ptr() };
+
+                    // Even though the field is 20 bits long for 16-bit counters, only 16 bits are
+                    // valid, so we convert to the appropriate type.
+                    let arr = tim.arr.read().arr().bits() as u16;
+
+                    // One PWM cycle is ARR+1 counts long
+                    // Valid PWM duty cycles are 0 to ARR+1
+                    // However, if ARR is 65535 on a 16-bit timer, we can't add 1
+                    // In that case, 100% duty cycle is not possible, only 65535/65536
+                    if arr == u16::MAX {
+                        arr
+                    }
+                    else {
+                        arr + 1
+                    }
+                }
+
+                fn set_duty_cycle(&mut self, duty: u16) -> Result<(), Self::Error> {
+                    let tim = unsafe { &*$TIMX::ptr() };
+
+                    tim.$ccrx().write(|w| unsafe { w.ccr().bits(duty.into()) });
+
+                    Ok(())
+                }
+            }
+
+            impl<COMP, POL, NPOL> hal_api::pwm::ErrorType for Pwm<$TIMX, $CH, COMP, POL, NPOL> {
+                type Error = hal_api::pwm::ErrorKind;
             }
 
             // Enable implementation for ComplementaryImpossible
@@ -1686,42 +1748,42 @@ macro_rules! tim_pin_hal_old {
 }
 
 // Dual channel timers
-tim_pin_hal_old! {
+tim_pin_pwm! {
     TIM15: (C1, cc1e, cc1p, ccmr1_output, oc1pe, oc1m, ccr1, u16, cc1ne, cc1np),
 }
 // Channel 1 is complementary, channel 2 isn't
-tim_pin_hal_old! {
+tim_pin_pwm! {
     TIM15: (C2, cc2e, cc2p, ccmr1_output, oc2pe, oc2m, ccr2, u16),
 }
 
 // Single channel timers
-tim_pin_hal_old! {
+tim_pin_pwm! {
     TIM16: (C1, cc1e, cc1p, ccmr1_output, oc1pe, oc1m, ccr1, u16, cc1ne, cc1np),
 }
-tim_pin_hal_old! {
+tim_pin_pwm! {
     TIM17: (C1, cc1e, cc1p, ccmr1_output, oc1pe, oc1m, ccr1, u16, cc1ne, cc1np),
 }
 
 // Quad channel timers
-tim_pin_hal_old! {
+tim_pin_pwm! {
     TIM1: (C1, cc1e, cc1p, ccmr1_output, oc1pe, oc1m, ccr1, u16, cc1ne, cc1np),
     TIM1: (C2, cc2e, cc2p, ccmr1_output, oc2pe, oc2m, ccr2, u16, cc2ne, cc2np),
     TIM1: (C3, cc3e, cc3p, ccmr2_output, oc3pe, oc3m, ccr3, u16, cc3ne, cc3np),
     TIM1: (C4, cc4e, cc4p, ccmr2_output, oc4pe, oc4m, ccr4, u16, cc4ne, cc4np),
 }
-tim_pin_hal_old! {
+tim_pin_pwm! {
     TIM2: (C1, cc1e, cc1p, ccmr1_output, oc1pe, oc1m, ccr1, u32),
     TIM2: (C2, cc2e, cc2p, ccmr1_output, oc2pe, oc2m, ccr2, u32),
     TIM2: (C3, cc3e, cc3p, ccmr2_output, oc3pe, oc3m, ccr3, u32),
     TIM2: (C4, cc4e, cc4p, ccmr2_output, oc4pe, oc4m, ccr4, u32),
 }
-tim_pin_hal_old! {
+tim_pin_pwm! {
     TIM3: (C1, cc1e, cc1p, ccmr1_output, oc1pe, oc1m, ccr1, u16),
     TIM3: (C2, cc2e, cc2p, ccmr1_output, oc2pe, oc2m, ccr2, u16),
     TIM3: (C3, cc3e, cc3p, ccmr2_output, oc3pe, oc3m, ccr3, u16),
     TIM3: (C4, cc4e, cc4p, ccmr2_output, oc4pe, oc4m, ccr4, u16),
 }
-tim_pin_hal_old! {
+tim_pin_pwm! {
     TIM4: (C1, cc1e, cc1p, ccmr1_output, oc1pe, oc1m, ccr1, u16),
     TIM4: (C2, cc2e, cc2p, ccmr1_output, oc2pe, oc2m, ccr2, u16),
     TIM4: (C3, cc3e, cc3p, ccmr2_output, oc3pe, oc3m, ccr3, u16),
@@ -1734,14 +1796,14 @@ tim_pin_hal_old! {
     feature = "stm32g483",
     feature = "stm32g484"
 ))]
-tim_pin_hal_old! {
+tim_pin_pwm! {
     TIM5: (C1, cc1e, cc1p, ccmr1_output, oc1pe, oc1m, ccr1, u32),
     TIM5: (C2, cc2e, cc2p, ccmr1_output, oc2pe, oc2m, ccr2, u32),
     TIM5: (C3, cc3e, cc3p, ccmr2_output, oc3pe, oc3m, ccr3, u32),
     TIM5: (C4, cc4e, cc4p, ccmr2_output, oc4pe, oc4m, ccr4, u32),
 }
 // Quad channel timers
-tim_pin_hal_old! {
+tim_pin_pwm! {
     TIM8: (C1, cc1e, cc1p, ccmr1_output, oc1pe, oc1m, ccr1, u16, cc1ne, cc1np),
     TIM8: (C2, cc2e, cc2p, ccmr1_output, oc2pe, oc2m, ccr2, u16, cc2ne, cc2np),
     TIM8: (C3, cc3e, cc3p, ccmr2_output, oc3pe, oc3m, ccr3, u16, cc3ne, cc3np),
@@ -1755,7 +1817,7 @@ tim_pin_hal_old! {
     feature = "stm32g491",
     feature = "stm32g4A1"
 ))]
-tim_pin_hal_old! {
+tim_pin_pwm! {
     TIM20: (C1, cc1e, cc1p, ccmr1_output, oc1pe, oc1m, ccr1, u16, cc1ne, cc1np),
     TIM20: (C2, cc2e, cc2p, ccmr1_output, oc2pe, oc2m, ccr2, u16, cc2ne, cc2np),
     TIM20: (C3, cc3e, cc3p, ccmr2_output, oc3pe, oc3m, ccr3, u16, cc3ne, cc3np),
@@ -1763,10 +1825,10 @@ tim_pin_hal_old! {
 }
 
 // Low-power timers
-macro_rules! lptim_hal_old {
+macro_rules! lptim_pwm {
     ($($TIMX:ident: $timX:ident,)+) => {
         $(
-            pwm_ext_hal_old!($TIMX: $timX);
+            tim_pwm_ext!($TIMX: $timX);
 
             /// Configures PWM signal on the LPTIM OUT pin.
             fn $timX<PINS, T, U>(
@@ -1863,10 +1925,49 @@ macro_rules! lptim_hal_old {
                     tim.icr.write(|w| w.cmpokcf().set_bit());
                 }
             }
+
+            impl CustomEnable for Pwm<$TIMX, C1, ComplementaryImpossible, ActiveHigh, ActiveHigh> {
+                fn disable(&mut self) {
+                    let tim = unsafe { &*$TIMX::ptr() };
+
+                    // LPTIM only has one output, so we disable the
+                    // entire timer
+                    tim.cr.modify(|_, w| w.enable().clear_bit());
+                }
+
+                fn enable(&mut self) {
+                    let tim = unsafe { &*$TIMX::ptr() };
+
+                    tim.cr.modify(|_, w| w.cntstrt().set_bit().enable().set_bit());
+                }
+            }
+
+            impl hal_api::pwm::SetDutyCycle for Pwm<$TIMX, C1, ComplementaryImpossible, ActiveHigh, ActiveHigh> {
+
+                fn max_duty_cycle(&self) -> u16 {
+                    let tim = unsafe { &*$TIMX::ptr() };
+
+                    tim.arr.read().arr().bits()
+                }
+
+                fn set_duty_cycle(&mut self, duty: u16) -> Result<(), Self::Error> {
+                    let tim = unsafe { &*$TIMX::ptr() };
+
+                    tim.cmp.write(|w| unsafe { w.cmp().bits(duty) });
+                    while !tim.isr.read().cmpok().bit_is_set() {}
+                    tim.icr.write(|w| w.cmpokcf().set_bit());
+
+                    Ok(())
+                }
+            }
+
+            impl hal_api::pwm::ErrorType for Pwm<$TIMX, C1, ComplementaryImpossible, ActiveHigh, ActiveHigh> {
+                type Error = hal_api::pwm::ErrorKind;
+            }
         )+
     }
 }
 
-lptim_hal_old! {
+lptim_pwm! {
     LPTIMER1: lptimer1,
 }
