@@ -564,6 +564,9 @@ macro_rules! gpio {
                         self
                     }
 
+                    /// Configures the pin to work with an alternative function.
+                    /// See the alternate function table in the datasheet of your STM32 chip for the options for each pin.
+                    /// This function is required to use peripherals like [`I2C`](crate::i2c) or [`SPI`](crate::spi)
                     pub fn into_alternate<const A: u8>(self) -> $PXi<Alternate<A>> {
                         let mode = A as u32;
                         let offset = 2 * $i;
