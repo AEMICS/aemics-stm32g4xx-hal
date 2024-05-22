@@ -36,6 +36,11 @@ fn main() -> ! {
     let sclk = gpiob.pb13.into_alternate::<AF5>();
     let miso = gpiob.pb14.into_alternate::<AF5>();
     let mosi = gpiob.pb15.into_alternate::<AF5>();
+    //Alternatively, it is possible to be implicit with the into_alternate method, and have the Rust compiler infer the required alternate function:
+    //  let sclk = gpiob.pb13.into_alternate();
+    //  let miso = gpiob.pb14.into_alternate();
+    //  let mosi = gpiob.pb15.into_alternate();
+    //
 
     let mut spi = dp
         .SPI2
