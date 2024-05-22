@@ -23,8 +23,10 @@ static_assertions = "1.1.0"
 fugit = "0.3.5"
 cortex-m-rt = "0.7.3"
 panic-semihosting = "0.6.0"
-
 custom_hal_api = { path = "src/custom_hal_api"}
+
+embedded-can = "0.4.1" #API crate for CAN functionality
+embedded-io = "0.6.1" #API crate for IO (serial communication) functionality.
 
 #Old embedded-hal version for backwards compatibility.
 [dependencies.embedded-hal-02]
