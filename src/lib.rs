@@ -106,3 +106,4 @@ pub mod independent_watchdog;
 pub mod i2c;
 pub mod preludes;
 pub mod spi;
+pub mod usb;

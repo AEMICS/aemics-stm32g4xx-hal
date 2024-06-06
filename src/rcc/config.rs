@@ -22,6 +22,11 @@ pub enum SysClockSrc {
     HSE(Hertz),
 }
 
+pub enum CK48Src {
+    OFF,
+    HSI48
+}
+
 /// Microcontroller clock output source
 pub enum MCOSrc {
     LSI,
@@ -328,11 +333,11 @@ impl Default for PllConfig {
 /// Clocks configutation
 pub struct Config {
     pub(crate) sys_mux: SysClockSrc,
+    pub(crate) ck48_mux: CK48Src,
     pub(crate) pll_cfg: PllConfig,
     pub(crate) ahb_psc: Prescaler,
     pub(crate) apb1_psc: Prescaler,
     pub(crate) apb2_psc: Prescaler,
-
     /// Required for f_sys > 150MHz
     pub(crate) enable_boost: bool,
 }
@@ -350,8 +355,21 @@ impl Config {
         Config::default().clock_src(SysClockSrc::HSI)
     }
 
+    pub fn hsi48() -> Self {
+        Config::default().ck48_src(CK48Src::HSI48)
+    }
+
+    pub fn hsi_plus_hsi48() -> Self {
+        Config::default().clock_src(SysClockSrc::HSI).ck48_src(CK48Src::HSI48)
+    }
+
     pub fn clock_src(mut self, mux: SysClockSrc) -> Self {
         self.sys_mux = mux;
+        self
+    }
+
+    pub fn ck48_src(mut self, mux48: CK48Src) -> Self {
+        self.ck48_mux = mux48;
         self
     }
 
@@ -385,6 +403,7 @@ impl Default for Config {
     fn default() -> Config {
         Config {
             sys_mux: SysClockSrc::HSI,
+            ck48_mux: CK48Src::OFF,
             pll_cfg: PllConfig::default(),
             ahb_psc: Prescaler::NotDivided,
             apb1_psc: Prescaler::NotDivided,

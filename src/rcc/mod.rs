@@ -1,6 +1,6 @@
 use crate::pwr::{self, PowerConfiguration};
 use crate::stm32::{rcc, FLASH, PWR, RCC};
-use crate::time::{Hertz, RateExtU32};
+use crate::time::{Hertz, RateExtU32, ExtU32};
 
 mod clockout;
 mod config;
@@ -13,12 +13,15 @@ pub trait Instance: crate::Sealed + Enable + Reset + GetBusFreq {}
 
 /// HSI speed
 pub const HSI_FREQ: u32 = 16_000_000;
+pub const HSI48_FREQ: u32 = 48_000_000;
 
 /// Clock frequencies
 #[derive(Clone, Copy, Debug)]
 pub struct Clocks {
     /// System frequency
     pub sys_clk: Hertz,
+    /// HSI48 frequency
+    pub ck48_clk: Hertz,
     /// Core frequency
     pub core_clk: Hertz,
     /// AHB frequency
@@ -51,6 +54,7 @@ impl Default for Clocks {
         let freq = HSI_FREQ.Hz();
         Clocks {
             sys_clk: freq,
+            ck48_clk: HSI48_FREQ.Hz(),
             ahb_clk: freq,
             core_clk: freq,
             apb1_clk: freq,
@@ -94,6 +98,16 @@ impl Rcc {
                 }
                 (pll_clk.r.unwrap(), 0b11)
             }
+        };
+
+        let (ck48_clk) = match rcc_cfg.ck48_mux {
+
+            CK48Src::HSI48 => {
+                self.enable_hsi48();
+                (HSI48_FREQ.Hz())
+            }
+
+            _ => {0.Hz()}
         };
 
         let sys_freq = sys_clk.raw();
@@ -221,6 +235,7 @@ impl Rcc {
             clocks: Clocks {
                 pll_clk,
                 sys_clk,
+                ck48_clk,
                 core_clk: ahb_freq.Hz(),
                 ahb_clk: ahb_freq.Hz(),
                 apb1_clk: apb1_freq.Hz(),
@@ -419,6 +434,16 @@ impl Rcc {
     pub(crate) fn enable_hsi(&self) {
         self.rb.cr.modify(|_, w| w.hsion().set_bit());
         while self.rb.cr.read().hsirdy().bit_is_clear() {}
+    }
+
+    pub(crate) fn enable_hsi48(&self) {
+        self.rb.crrcr.write(|w| w.hsi48on().set_bit());
+        while self.rb.crrcr.read().hsi48rdy().bit_is_clear() {}
+
+        self.rb.ccipr.write(|w| w.clk48sel().hsi48());
+        self.rb.apb1smenr1.write(|w| w.usbsmen().clear_bit());
+        self.rb.apb1enr1.write(|w| w.crsen().set_bit());
+        self.rb.apb1enr1.write(|w| w.usben().set_bit());
     }
 
     pub(crate) fn enable_hse(&self, bypass: bool) {
