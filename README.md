@@ -13,3 +13,8 @@ TODO (Readme):
 * Setup process
 * Basic usage
 * Link to documentation
+
+
+## Version History
+* **20-03-2024: Version 0.0.0**
+    Initial version of the project, implementing only embedded-hal v0.2.6. 
