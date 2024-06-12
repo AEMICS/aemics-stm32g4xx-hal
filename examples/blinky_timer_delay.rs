@@ -29,8 +29,6 @@ fn main() -> ! {
 
     let mut delay = DelayFromCountDownTimer::new(timer2.create_count_down_ms());
 
-
-
     //Program, toggles the LED on/off at 1Hz.
     loop
     {

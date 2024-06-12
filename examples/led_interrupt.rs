@@ -12,9 +12,11 @@ use aemics_stm32g4xx_hal::preludes::{
 use aemics_stm32g4xx_hal::pwr::PwrExt;
 use panic_semihosting as _; //Panic Handler
 
-//This example uses a mutex with the interrupt routine. This ensures only one process can change the value of our LED at once.
+
 static TIMER_TIM2: Mutex<RefCell<Option<CountDownTimer<stm32::TIM2>>>> =
     Mutex::new(RefCell::new(None));
+
+
 
 //Hier komt de code voor de interrupt. Eerst zetten we de interrupt bit weer uit, daarna herstart de timer.
 #[interrupt]
