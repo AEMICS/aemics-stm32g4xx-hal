@@ -37,6 +37,7 @@ pub extern crate stm32g4;
 
 //Explicitly add these external crates to the HAL crate so projects implementing this HAL can use these two crates.
 pub extern crate cortex_m_rt;
+pub extern crate panic_semihosting;
 
 pub use nb::block;
 
