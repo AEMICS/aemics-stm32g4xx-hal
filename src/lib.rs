@@ -39,6 +39,10 @@ pub extern crate stm32g4;
 pub extern crate cortex_m_rt;
 pub extern crate panic_semihosting;
 
+pub extern crate stm32_usbd;
+pub extern crate usb_device;
+pub extern crate usbd_serial;
+
 pub use nb::block;
 
 mod sealed {
