@@ -517,7 +517,7 @@ macro_rules! hal {
             impl CountDownTimer<$TIM> {
                 /// Starts listening for an `event`
                 ///
-                /// Note, you will also have to enable the TIM2 interrupt in the NVIC to start
+                /// Note, you will also have to enable the corresponding interrupt in the NVIC to start
                 /// receiving events.
                 pub fn listen(&mut self, event: Event) {
                     match event {

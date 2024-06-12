@@ -75,9 +75,8 @@ impl SYSTDelayExt for SYST {
 //Until the cortex-m crate starts supporting HAL 1.0, this is the best we can do. NanoSecond accurate delays are unsupported by this crate.
 //TODO: If time allows, make custom fork of cortex-m crate and update to current HAL version.
 
-//NOTE: This entire hal is structured terribly. Everything links back to everything else. Oh well, too bad.
 pub trait DelayExt {
-
+    
     fn delay_us<T>(&mut self, delay: T)
         where
             T: Into<MicroSecond>;

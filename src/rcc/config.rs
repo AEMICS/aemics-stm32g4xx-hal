@@ -359,10 +359,6 @@ impl Config {
         Config::default().ck48_src(CK48Src::HSI48)
     }
 
-    pub fn hsi_plus_hsi48() -> Self {
-        Config::default().clock_src(SysClockSrc::HSI).ck48_src(CK48Src::HSI48)
-    }
-
     pub fn clock_src(mut self, mux: SysClockSrc) -> Self {
         self.sys_mux = mux;
         self

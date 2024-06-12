@@ -100,11 +100,11 @@ impl Rcc {
             }
         };
 
-        let (ck48_clk) = match rcc_cfg.ck48_mux {
+        let ck48_clk = match rcc_cfg.ck48_mux {
 
             CK48Src::HSI48 => {
                 self.enable_hsi48();
-                (HSI48_FREQ.Hz())
+                HSI48_FREQ.Hz()
             }
 
             _ => {0.Hz()}
