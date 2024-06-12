@@ -3,10 +3,7 @@
 
 #![deny(missing_docs)]
 
-/*
-    Currently unused but this is the formula for using temperature calibration:
-    Temperature in °C = ( ( (TS_CAL2_TEMP-TS_CAL1_TEMP) / (TS_CAL2-TS_CAL1) ) * (TS_DATA-TS_CAL1) ) + 30°C
-*/
+
 
 //use crate::dma::traits::PeriAddress;
 pub use crate::time::U32Ext as _;
@@ -20,10 +17,6 @@ use crate::{
 };
 use core::fmt;
 use core::marker::PhantomData;
-use hal_api_old::{
-    adc::{Channel, OneShot},
-    blocking::delay::DelayUs,
-};
 
 use self::config::ExternalTrigger12;
 
@@ -136,7 +129,7 @@ impl Temperature {
 macro_rules! adc_pins {
     ($($pin:ty => ($adc:ident, $chan:expr)),+ $(,)*) => {
         $(
-            impl Channel<stm32::$adc> for $pin {
+            impl hal_api_custom::adc::Channel<stm32::$adc> for $pin {
                 type ID = u8;
                 fn channel() -> u8 { $chan }
             }
@@ -147,7 +140,7 @@ macro_rules! adc_pins {
 macro_rules! adc_op_pga {
     ($($opamp:ty => ($adc:ident, $chan:expr)),+ $(,)*) => {
         $(
-            impl<A, B> Channel<stm32::$adc> for $opamp {
+            impl<A, B> hal_api_custom::adc::Channel<stm32::$adc> for $opamp {
                 type ID = u8;
                 fn channel() -> u8 { $chan }
             }
@@ -158,7 +151,7 @@ macro_rules! adc_op_pga {
 macro_rules! adc_op_follower {
     ($($opamp:ty => ($adc:ident, $chan:expr)),+ $(,)*) => {
         $(
-            impl<A> Channel<stm32::$adc> for $opamp {
+            impl<A> hal_api_custom::adc::Channel<stm32::$adc> for $opamp {
                 type ID = u8;
                 fn channel() -> u8 { $chan }
             }
@@ -168,8 +161,6 @@ macro_rules! adc_op_follower {
 
 /// Contains types related to ADC configuration
 pub mod config {
-    use hal_api_old::adc::Channel;
-
     /// The place in the sequence a given channel should be captured
     #[derive(Debug, PartialEq, PartialOrd, Copy, Clone)]
     pub enum Sequence {
@@ -897,7 +888,7 @@ pub mod config {
         /// Set pin to Single-Ended or Differential
         pub fn set<PIN, ADC>(&mut self, it: InputType)
         where
-            PIN: Channel<ADC, ID = u8>,
+            PIN: hal_api_custom::adc::Channel<ADC, ID = u8>,
         {
             match it {
                 InputType::SingleEnded => {
@@ -1377,11 +1368,12 @@ impl From<ClockSource> for u8 {
 /// used to create an ADC instance from the stm32::Adc
 pub trait AdcClaim<TYPE: TriggerType> {
     /// create a disabled ADC instance from the stm32::Adc
+
     fn claim(
         self,
         cs: ClockSource,
         rcc: &Rcc,
-        delay: &mut impl DelayUs<u8>,
+        delay: &mut impl hal_api_old::blocking::delay::DelayUs<u8>,
         reset: bool,
     ) -> Adc<TYPE, Disabled>;
 
@@ -1391,7 +1383,7 @@ pub trait AdcClaim<TYPE: TriggerType> {
         cs: ClockSource,
         rcc: &Rcc,
         config: config::AdcConfig<TYPE::ExternalTrigger>,
-        delay: &mut impl DelayUs<u8>,
+        delay: &mut impl hal_api_old::blocking::delay::DelayUs<u8>,
         reset: bool,
     ) -> Adc<TYPE, Configured>;
 }
@@ -1583,7 +1575,7 @@ macro_rules! adc {
 
                 /// Powers-up an powered-down Adc
                 #[inline(always)]
-                pub fn power_up(&mut self, delay: &mut impl DelayUs<u8>) {
+                pub fn power_up(&mut self, delay: &mut impl hal_api_old::blocking::delay::DelayUs<u8>) {
                     if self.is_deeppwd_enabled() {
                         self.disable_deeppwd_down();
                     }
@@ -1616,7 +1608,7 @@ macro_rules! adc {
 
                 /// Enables the Voltage Regulator
                 #[inline(always)]
-                pub fn enable_vreg(&mut self, delay: &mut impl DelayUs<u8>) {
+                pub fn enable_vreg(&mut self, delay: &mut impl hal_api_old::blocking::delay::DelayUs<u8>) {
                     self.adc_reg.cr.modify(|_, w| w.advregen().set_bit());
                     while !self.adc_reg.cr.read().advregen().bit_is_set() {}
 
@@ -1904,7 +1896,7 @@ macro_rules! adc {
                 /// to sample for at a given ADC clock frequency
                 pub fn configure_channel<CHANNEL>(&mut self, _channel: &CHANNEL, sequence: config::Sequence, sample_time: config::SampleTime)
                 where
-                    CHANNEL: Channel<stm32::$adc_type, ID=u8>
+                    CHANNEL: hal_api_custom::adc::Channel<stm32::$adc_type, ID=u8>
                 {
 
                     //Check the sequence is long enough
@@ -1968,7 +1960,7 @@ macro_rules! adc {
                 /// Note that it reconfigures the adc sequence and doesn't restore it
                 pub fn convert<PIN>(&mut self, pin: &PIN, sample_time: config::SampleTime) -> u16
                 where
-                    PIN: Channel<stm32::$adc_type, ID=u8>
+                    PIN: hal_api_custom::adc::Channel<stm32::$adc_type, ID=u8>
                 {
                     let saved_config = self.config;
                     self.adc_reg.cfgr.modify(|_, w| w
@@ -2124,7 +2116,7 @@ macro_rules! adc {
                 /// * `reset` - should a reset be performed. This is provided because on some devices multiple ADCs share the same common reset
                 /// TODO: fix needing SYST
                 #[inline(always)]
-                fn claim(self, cs: ClockSource, rcc: &Rcc, delay: &mut impl DelayUs<u8>, reset: bool) -> Adc<stm32::$adc_type, Disabled> {
+                fn claim(self, cs: ClockSource, rcc: &Rcc, delay: &mut impl hal_api_old::blocking::delay::DelayUs<u8>, reset: bool) -> Adc<stm32::$adc_type, Disabled> {
                     unsafe {
                         let rcc_ptr = &(*stm32::RCC::ptr());
                         stm32::$adc_type::enable(rcc_ptr);
@@ -2148,7 +2140,7 @@ macro_rules! adc {
 
                 /// claims and configures the Adc
                 #[inline(always)]
-                fn claim_and_configure(self, cs: ClockSource, rcc: &Rcc, config: config::AdcConfig<$trigger_type>, delay: &mut impl DelayUs<u8>, reset :bool) -> Adc<stm32::$adc_type, Configured> {
+                fn claim_and_configure(self, cs: ClockSource, rcc: &Rcc, config: config::AdcConfig<$trigger_type>, delay: &mut impl hal_api_old::blocking::delay::DelayUs<u8>, reset :bool) -> Adc<stm32::$adc_type, Configured> {
                     let mut adc = self.claim(cs, rcc, delay, reset);
                     adc.adc.config = config;
 
@@ -2172,7 +2164,7 @@ macro_rules! adc {
             impl Adc<stm32::$adc_type, PoweredDown> {
                 /// Powers-up an powered-down Adc
                 #[inline(always)]
-                pub fn power_up(mut self, delay: &mut impl DelayUs<u8>) -> Adc<stm32::$adc_type, Disabled> {
+                pub fn power_up(mut self, delay: &mut impl hal_api_old::blocking::delay::DelayUs<u8>) -> Adc<stm32::$adc_type, Disabled> {
                     self.adc.power_up(delay);
 
                     Adc {
@@ -2411,7 +2403,7 @@ macro_rules! adc {
                 #[inline(always)]
                 pub fn configure_channel<CHANNEL>(&mut self, channel: &CHANNEL, sequence: config::Sequence, sample_time: config::SampleTime)
                 where
-                    CHANNEL: Channel<stm32::$adc_type, ID=u8>
+                    CHANNEL: hal_api_custom::adc::Channel<stm32::$adc_type, ID=u8>
                 {
                     self.adc.configure_channel(channel, sequence, sample_time)
                 }
@@ -2421,7 +2413,7 @@ macro_rules! adc {
                 #[inline(always)]
                 pub fn convert<PIN>(&mut self, pin: &PIN, sample_time: config::SampleTime) -> u16
                 where
-                    PIN: Channel<stm32::$adc_type, ID=u8>
+                    PIN: hal_api_custom::adc::Channel<stm32::$adc_type, ID=u8>
                 {
                     self.adc.convert(pin, sample_time)
                 }
@@ -2464,7 +2456,7 @@ macro_rules! adc {
                 #[inline(always)]
                 pub fn convert<PIN>(&mut self, pin: &PIN, sample_time: config::SampleTime) -> u16
                 where
-                    PIN: Channel<stm32::$adc_type, ID=u8>
+                    PIN: hal_api_custom::adc::Channel<stm32::$adc_type, ID=u8>
                 {
                     self.adc.reset_sequence();
                     self.adc.configure_channel(pin, config::Sequence::One, sample_time);
@@ -2605,9 +2597,9 @@ macro_rules! adc {
                 const REQUEST_LINE: Option<u8> = Some($mux as u8);
             }
 
-            impl<PIN> OneShot<stm32::$adc_type, u16, PIN> for Adc<stm32::$adc_type, Disabled>
+            impl<PIN> hal_api_custom::adc::OneShot<stm32::$adc_type, u16, PIN> for Adc<stm32::$adc_type, Disabled>
             where
-                PIN: Channel<stm32::$adc_type, ID=u8>,
+                PIN: hal_api_custom::adc::Channel<stm32::$adc_type, ID=u8>,
             {
                 type Error = ();
 
