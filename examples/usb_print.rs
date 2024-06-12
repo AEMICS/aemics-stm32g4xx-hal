@@ -1,6 +1,13 @@
 #![no_std]
 #![no_main]
 
+//! USB Print example
+//!
+//! This example shows an interrupt driver USB driver set up to print "Hello World" once every second.
+//! It has to be interrupt driven due to the delay used in the program's loop function.
+//!
+//! Currently the interrupt logic has not been wrapped into a USB driver.
+
 use panic_semihosting as _; //Panic Handler
 use aemics_stm32g4xx_hal as hal;
 
