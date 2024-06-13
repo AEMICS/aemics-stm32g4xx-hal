@@ -7,3 +7,5 @@ pub mod i2c;
 pub mod interrupts;
 pub mod timers;
 pub mod gpio;
+pub mod usb;
+pub mod spi;

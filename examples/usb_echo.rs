@@ -1,22 +1,13 @@
 #![no_std]
 #![no_main]
 
-use panic_semihosting as _;
 use aemics_stm32g4xx_hal as hal;
 
-use hal::usb::USBObj;
-use hal::{
-    rcc::{Config, RccExt},
-    stm32,
+use hal::preludes::{
+    default::*,
+    usb::*
 };
 
-use cortex_m_rt::entry;
-use stm32_usbd::UsbBus;
-
-//USB drivers
-use usb_device::prelude::*;
-use usbd_serial::{SerialPort, USB_CLASS_CDC};
-use aemics_stm32g4xx_hal::pwr::PwrExt;
 
 #[entry]
 fn main() -> ! {

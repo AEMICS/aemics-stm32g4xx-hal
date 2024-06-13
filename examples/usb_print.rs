@@ -8,14 +8,8 @@
 //!
 //! Currently the interrupt logic has not been wrapped into a USB driver.
 
-use panic_semihosting as _; //Panic Handler
 use aemics_stm32g4xx_hal as hal;
 
-use hal::usb::USBObj;
-use hal::{
-    rcc::{Config, RccExt},
-    stm32,
-};
 
 use aemics_stm32g4xx_hal::preludes::{
     default::*,
@@ -23,18 +17,8 @@ use aemics_stm32g4xx_hal::preludes::{
     interrupts::*,
     timers::*,
     delay::*,
+    usb::*
 };
-
-
-use stm32_usbd::UsbBus;
-
-//USB drivers
-use usb_device::prelude::*;
-use usbd_serial::{SerialPort, USB_CLASS_CDC};
-use aemics_stm32g4xx_hal::pwr::PwrExt;
-
-use usb_device::bus::UsbBusAllocator;
-use aemics_stm32g4xx_hal::usb::UsbBusType;
 
 //This example uses a mutex with the interrupt routine. This ensures only one process can change the value of our LED at once.
 static MUTEX_TIM2: Mutex<RefCell<Option<CountDownTimer<stm32::TIM2>>>> =

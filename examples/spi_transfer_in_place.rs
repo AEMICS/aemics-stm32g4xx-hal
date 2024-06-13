@@ -8,17 +8,17 @@
 use fugit::{RateExtU32};
 use aemics_stm32g4xx_hal as aemics_hal;
 
-use aemics_hal::preludes::default::*;
-use aemics_hal::preludes::digital::*;
-use aemics_hal::preludes::delay::*;
-use aemics_hal::timer::*;
 
-use aemics_hal::hal_api::spi::*;
+use aemics_hal::preludes::{
+    default::*,
+    digital::*,
+    delay::*,
+    timers::*,
+    spi::*
+};
+
 use aemics_stm32g4xx_hal::gpio::AF5;
-use aemics_stm32g4xx_hal::pwr::PwrExt;
-use aemics_stm32g4xx_hal::spi::*;
 
-use panic_semihosting as _;
 
 #[entry]
 fn main() -> ! {
