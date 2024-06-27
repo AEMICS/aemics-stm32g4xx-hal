@@ -8,7 +8,7 @@ use cast::{u16, u32};
 use cortex_m::peripheral::syst::SystClkSource;
 use cortex_m::peripheral::{DCB, DWT, SYST};
 use hal_api_old::timer::{CountDown};
-use hal_api_custom::timer::{CountDownNs, CountDownUs, CountDownMs};
+use crate::hal_api_custom::timer::{CountDownNs, CountDownUs, CountDownMs};
 use void::Void;
 
 use crate::stm32::RCC;
@@ -122,7 +122,7 @@ impl<TIM> Timer<TIM>
     }
 }
 
-impl<TIM> hal_api_custom::timer::Periodic for CountDownTimer<TIM> {}
+impl<TIM> crate::hal_api_custom::timer::Periodic for CountDownTimer<TIM> {}
 
 /// Interrupt events
 pub enum Event {
@@ -222,13 +222,13 @@ impl hal_api_old::timer::CountDown for CountDownTimer<SYST> {
     }
 }
 
-impl hal_api_custom::timer::CountDown for CountDownTimer<SYST> {
+impl crate::hal_api_custom::timer::CountDown for CountDownTimer<SYST> {
     fn wait(&mut self) -> nb::Result<(), Void> {
         self.shared_wait()
     }
 }
 
-impl hal_api_custom::timer::CountDownNs for CountDownTimer<SYST> {
+impl crate::hal_api_custom::timer::CountDownNs for CountDownTimer<SYST> {
     type Time = NanoSecond;
 
     fn start<T>(&mut self, timeout: T)
@@ -245,7 +245,7 @@ impl hal_api_custom::timer::CountDownNs for CountDownTimer<SYST> {
     }
 }
 
-impl hal_api_custom::timer::CountDownUs for CountDownTimer<SYST> {
+impl crate::hal_api_custom::timer::CountDownUs for CountDownTimer<SYST> {
     type Time = MicroSecond;
 
     fn start<T>(&mut self, timeout: T)
@@ -262,7 +262,7 @@ impl hal_api_custom::timer::CountDownUs for CountDownTimer<SYST> {
     }
 }
 
-impl hal_api_custom::timer::CountDownMs for CountDownTimer<SYST> {
+impl crate::hal_api_custom::timer::CountDownMs for CountDownTimer<SYST> {
     type Time = MilliSecond;
 
     fn start<T>(&mut self, timeout: T)
@@ -323,7 +323,7 @@ impl hal_api_old::timer::Cancel for CountDownTimer<SYST> {
     }
 }
 
-impl hal_api_custom::timer::Cancel for CountDownTimer<SYST> {
+impl crate::hal_api_custom::timer::Cancel for CountDownTimer<SYST> {
     type Error = Error;
 
     fn cancel(&mut self) -> Result<(), Self::Error> {
@@ -580,28 +580,28 @@ macro_rules! hal {
                 }
             }
 
-            impl hal_api_custom::timer::CountDown for CountDownTimer<$TIM> {
+            impl crate::hal_api_custom::timer::CountDown for CountDownTimer<$TIM> {
 
                 fn wait(&mut self) -> nb::Result<(), Void> {
                      self.shared_wait()
                 }
             }
 
-            impl hal_api_custom::timer::CountDownNs for CountDownTimer<$TIM> {
+            impl crate::hal_api_custom::timer::CountDownNs for CountDownTimer<$TIM> {
 
                 type Time = NanoSecond;
 
                 start_func!(NanoSecond);
             }
 
-            impl hal_api_custom::timer::CountDownUs for CountDownTimer<$TIM> {
+            impl crate::hal_api_custom::timer::CountDownUs for CountDownTimer<$TIM> {
 
                 type Time = MicroSecond;
 
                 start_func!(MicroSecond);
             }
 
-            impl hal_api_custom::timer::CountDownMs for CountDownTimer<$TIM> {
+            impl crate::hal_api_custom::timer::CountDownMs for CountDownTimer<$TIM> {
 
                 type Time = MilliSecond;
 
@@ -657,7 +657,7 @@ macro_rules! hal {
                 }
             }
 
-            impl hal_api_custom::timer::Cancel for CountDownTimer<$TIM>
+            impl crate::hal_api_custom::timer::Cancel for CountDownTimer<$TIM>
             {
                 type Error = Error;
 

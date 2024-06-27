@@ -1,1 +1,0 @@
-pub use embedded_hal::serial::{Write, Read};

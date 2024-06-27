@@ -129,7 +129,7 @@ impl Temperature {
 macro_rules! adc_pins {
     ($($pin:ty => ($adc:ident, $chan:expr)),+ $(,)*) => {
         $(
-            impl hal_api_custom::adc::Channel<stm32::$adc> for $pin {
+            impl crate::hal_api_custom::adc::Channel<stm32::$adc> for $pin {
                 type ID = u8;
                 fn channel() -> u8 { $chan }
             }
@@ -140,7 +140,7 @@ macro_rules! adc_pins {
 macro_rules! adc_op_pga {
     ($($opamp:ty => ($adc:ident, $chan:expr)),+ $(,)*) => {
         $(
-            impl<A, B> hal_api_custom::adc::Channel<stm32::$adc> for $opamp {
+            impl<A, B> crate::hal_api_custom::adc::Channel<stm32::$adc> for $opamp {
                 type ID = u8;
                 fn channel() -> u8 { $chan }
             }
@@ -151,7 +151,7 @@ macro_rules! adc_op_pga {
 macro_rules! adc_op_follower {
     ($($opamp:ty => ($adc:ident, $chan:expr)),+ $(,)*) => {
         $(
-            impl<A> hal_api_custom::adc::Channel<stm32::$adc> for $opamp {
+            impl<A> crate::hal_api_custom::adc::Channel<stm32::$adc> for $opamp {
                 type ID = u8;
                 fn channel() -> u8 { $chan }
             }
@@ -888,7 +888,7 @@ pub mod config {
         /// Set pin to Single-Ended or Differential
         pub fn set<PIN, ADC>(&mut self, it: InputType)
         where
-            PIN: hal_api_custom::adc::Channel<ADC, ID = u8>,
+            PIN: crate::hal_api_custom::adc::Channel<ADC, ID = u8>,
         {
             match it {
                 InputType::SingleEnded => {
@@ -1896,7 +1896,7 @@ macro_rules! adc {
                 /// to sample for at a given ADC clock frequency
                 pub fn configure_channel<CHANNEL>(&mut self, _channel: &CHANNEL, sequence: config::Sequence, sample_time: config::SampleTime)
                 where
-                    CHANNEL: hal_api_custom::adc::Channel<stm32::$adc_type, ID=u8>
+                    CHANNEL: crate::hal_api_custom::adc::Channel<stm32::$adc_type, ID=u8>
                 {
 
                     //Check the sequence is long enough
@@ -1960,7 +1960,7 @@ macro_rules! adc {
                 /// Note that it reconfigures the adc sequence and doesn't restore it
                 pub fn convert<PIN>(&mut self, pin: &PIN, sample_time: config::SampleTime) -> u16
                 where
-                    PIN: hal_api_custom::adc::Channel<stm32::$adc_type, ID=u8>
+                    PIN: crate::hal_api_custom::adc::Channel<stm32::$adc_type, ID=u8>
                 {
                     let saved_config = self.config;
                     self.adc_reg.cfgr.modify(|_, w| w
@@ -2403,7 +2403,7 @@ macro_rules! adc {
                 #[inline(always)]
                 pub fn configure_channel<CHANNEL>(&mut self, channel: &CHANNEL, sequence: config::Sequence, sample_time: config::SampleTime)
                 where
-                    CHANNEL: hal_api_custom::adc::Channel<stm32::$adc_type, ID=u8>
+                    CHANNEL: crate::hal_api_custom::adc::Channel<stm32::$adc_type, ID=u8>
                 {
                     self.adc.configure_channel(channel, sequence, sample_time)
                 }
@@ -2413,7 +2413,7 @@ macro_rules! adc {
                 #[inline(always)]
                 pub fn convert<PIN>(&mut self, pin: &PIN, sample_time: config::SampleTime) -> u16
                 where
-                    PIN: hal_api_custom::adc::Channel<stm32::$adc_type, ID=u8>
+                    PIN: crate::hal_api_custom::adc::Channel<stm32::$adc_type, ID=u8>
                 {
                     self.adc.convert(pin, sample_time)
                 }
@@ -2456,7 +2456,7 @@ macro_rules! adc {
                 #[inline(always)]
                 pub fn convert<PIN>(&mut self, pin: &PIN, sample_time: config::SampleTime) -> u16
                 where
-                    PIN: hal_api_custom::adc::Channel<stm32::$adc_type, ID=u8>
+                    PIN: crate::hal_api_custom::adc::Channel<stm32::$adc_type, ID=u8>
                 {
                     self.adc.reset_sequence();
                     self.adc.configure_channel(pin, config::Sequence::One, sample_time);
@@ -2597,9 +2597,9 @@ macro_rules! adc {
                 const REQUEST_LINE: Option<u8> = Some($mux as u8);
             }
 
-            impl<PIN> hal_api_custom::adc::OneShot<stm32::$adc_type, u16, PIN> for Adc<stm32::$adc_type, Disabled>
+            impl<PIN> crate::hal_api_custom::adc::OneShot<stm32::$adc_type, u16, PIN> for Adc<stm32::$adc_type, Disabled>
             where
-                PIN: hal_api_custom::adc::Channel<stm32::$adc_type, ID=u8>,
+                PIN: crate::hal_api_custom::adc::Channel<stm32::$adc_type, ID=u8>,
             {
                 type Error = ();
 

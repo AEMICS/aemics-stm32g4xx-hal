@@ -1,0 +1,1 @@
+pub use hal_api_old::adc::{Channel, OneShot};

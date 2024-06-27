@@ -1,6 +1,6 @@
 use crate::pwr::{self, PowerConfiguration};
 use crate::stm32::{rcc, FLASH, PWR, RCC};
-use crate::time::{Hertz, RateExtU32, ExtU32};
+use crate::time::{Hertz, RateExtU32};
 
 mod clockout;
 mod config;

@@ -1,4 +1,3 @@
-workspace = { members = ["src/custom_hal_api"] }
 [package]
 authors = ["Wybren van den Akker"]
 categories = ["embedded", "hardware-support", "no-std"]
@@ -26,7 +25,6 @@ static_assertions = "1.1.0"
 fugit = "0.3.5"
 cortex-m-rt = "0.7.3"
 panic-semihosting = "0.6.0"
-custom_hal_api = { version = "0.1.0", path = "src/custom_hal_api"}
 embedded-io = "0.6.1" #API crate for IO (serial communication) functionality.
 
 #Ignore the warnings here, the stm32-usbd crate needs these packages.

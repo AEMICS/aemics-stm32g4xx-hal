@@ -46,7 +46,7 @@ use crate::time::ExtU32;
 use hal_api::delay::DelayNs;
 use hal_api_old::blocking::delay::{DelayUs, DelayMs};
 
-pub trait CountDown_ns: hal_api_custom::timer::CountDownNs {
+pub trait CountDown_ns: crate::hal_api_custom::timer::CountDownNs {
     fn max_period(&self) -> NanoSecond;
 }
 
@@ -54,11 +54,11 @@ pub trait CountDownCompat: hal_api_old::timer::CountDown {
     fn max_period(&self) -> MicroSecond;
 }
 
-pub trait CountDown_us: hal_api_custom::timer::CountDownUs {
+pub trait CountDown_us: crate::hal_api_custom::timer::CountDownUs {
     fn max_period(&self) -> MicroSecond;
 }
 
-pub trait CountDown_ms: hal_api_custom::timer::CountDownMs {
+pub trait CountDown_ms: crate::hal_api_custom::timer::CountDownMs {
     fn max_period(&self) -> MilliSecond;
 }
 
