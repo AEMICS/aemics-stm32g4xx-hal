@@ -5,6 +5,8 @@ The HAL implements the [embedded-hal crate](https://docs.rs/embedded-hal/latest/
 
 This HAL uses the [stm32g4 device support crate](https://docs.rs/crate/stm32g4/0.15.1) to interact with the MCU's registers.
 
+The HAL was based off of the [stm32g4xx-hal crate](https://github.com/stm32-rs/stm32g4xx-hal) and updated to embedded-hal v1.0.0.
+
 Currently, the only verified supported device is the STM32G473.
 
 ## Setup
