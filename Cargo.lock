@@ -4,7 +4,7 @@ version = 3
 
 [[package]]
 name = "aemics-stm32g4xx-hal"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "bare-metal 1.0.0",
  "bitflags 2.5.0",

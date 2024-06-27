@@ -7,7 +7,7 @@ edition = "2021"
 keywords = ["arm", "cortex-m", "stm32g4xx", "hal"]
 name = "aemics-stm32g4xx-hal"
 readme = "README.md"
-version = "0.0.0"
+version = "0.1.0"
 
 #[overflow_checks]
 
