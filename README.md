@@ -55,6 +55,10 @@ aemics-stm32g4xx-hal = "0.1.0"
 The /examples/ folder contains many examples which set up simple programs such as a blinky test program or I2C communication to use when getting started.
 
 
+## Known Issues
+* The USB implementation only functions in (optimized) release builds.
+
+
 ## Version History
 * **20-03-2024: Version 0.0.0**
     Initial version of the project, implementing only embedded-hal v0.2.7. 
