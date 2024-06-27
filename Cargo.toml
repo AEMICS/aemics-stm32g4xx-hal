@@ -2,7 +2,10 @@ workspace = { members = ["src/custom_hal_api"] }
 [package]
 authors = ["Wybren van den Akker"]
 categories = ["embedded", "hardware-support", "no-std"]
-description = "Peripheral access API for STM32G473"
+license="MIT/Apache-2.0"
+homepage = "https://www.aemics.nl"
+repository = "https://github.com/AEMICS/aemics-stm32g4xx-hal"
+description = "Hardware abstraction layer (HAL) for STM32G473"
 edition = "2021"
 keywords = ["arm", "cortex-m", "stm32g4xx", "hal"]
 name = "aemics-stm32g4xx-hal"
@@ -24,7 +27,6 @@ fugit = "0.3.5"
 cortex-m-rt = "0.7.3"
 panic-semihosting = "0.6.0"
 custom_hal_api = { path = "src/custom_hal_api"}
-
 embedded-io = "0.6.1" #API crate for IO (serial communication) functionality.
 
 #Ignore the warnings here, the stm32-usbd crate needs these packages.
@@ -73,9 +75,6 @@ version = "1.1"
 version = "0.3.2"
 optional = true
 
-
-
-
 [dev-dependencies]
 defmt-rtt = "0.4.0"
 cortex-m-rtic = "1.1.4"
@@ -88,8 +87,6 @@ log = "0.4.11"
 cortex-m-log = { version = "0.8.0", features = ["log-integration"] }
 cfg-if = "1.0.0"
 embedded-sdmmc = "0.7.0"
-
-
 
 [features]
 default = ["rt", "stm32g473"]
@@ -119,5 +116,3 @@ debug = false
 codegen-units = 1
 incremental = false
 lto = true
-
-
